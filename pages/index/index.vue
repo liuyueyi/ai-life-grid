@@ -93,10 +93,15 @@
               :class="['grid-cell', getCellClasses(cell), currentDimension === 'day' ? 'calendar-cell' : '']"
               @click="openCellDetail(cell)">
               <view class="cell-content">
-                <text class="cell-label" v-html="getCellLabel(cell)"></text>
+                <text class="cell-label" v-html="getCellLabel(cell)">
+                </text>
                 <text v-if="cell.hasEvents" class="cell-event-indicator">•</text>
                 <view v-if="currentDimension === 'day' && cell.isCurrentMonth" class="expand-button"
                   @tap.stop="viewFullDetail">+</view>
+                <view class="fullscreen-icon" @tap.stop="handleFullscreenClick(cell)"
+                  style="position: absolute; top: 2rpx; right: 12%;">
+                  <text>⛶</text>
+                </view>
               </view>
             </view>
           </view>
@@ -647,7 +652,14 @@ export default {
       }
     },
     showPopupTitle(cell) {
-      return `${cell.year}年${cell.month + 1}月${cell.day}日`;
+      switch (this.currentDimension) {
+        case 'year':
+          return `${cell.year}年`;
+        case 'month':
+          return `${cell.year}年${cell.month + 1}月`;
+        case 'day':
+          return `${cell.year}年${cell.month + 1}月${cell.day}日`;
+      }
     },
 
     getCellLabel(cell) {
@@ -664,7 +676,31 @@ export default {
               '退休': '(60岁以后)'
             };
             const range = stageRanges[cell.stageMark] || '';
-            return `<div class="stage-mark">${cell.stageMark}${range}</div>${label}`;
+            return `<div style="position: absolute;
+                    top: 0;
+                    /* 改为固定的上边距 */
+                    left: 0;
+                    /* 从左边开始 */
+                    right: 0;
+                    /* 延伸到右边 */
+                    margin: 0 auto;
+                    /* 水平居中 */
+                    background: linear-gradient(to right, #ec4899, #8b5cf6);
+                    color: white;
+                    font-size: 10px;
+                    /* 使用固定的字体大小 */
+                    padding: 2px 0;
+                    /* 只保留垂直方向的内边距 */
+                    text-align: center;
+                    border-radius: 10px 10px 0 0;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    z-index: 2;
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                    width: 100%;
+                    /* 设置宽度为格子的90% */
+                    transform: none;">${cell.stageMark}${range}</div>${label}`;
           }
           break;
         case 'month':
@@ -827,24 +863,30 @@ export default {
 
     // 格子详情相关方法
     openCellDetail(cell) {
-      if (cell.type === 'year') {
-        // 年视图点击进入对应月视图
-        this.currentDimension = 'month';
-        this.currentYear = cell.year;
-        this.updateVisibleCells();
-      } else if (cell.type === 'month') {
-        // 月视图点击进入对应日视图
-        this.currentDimension = 'day';
-        this.currentYear = cell.year;
-        this.currentMonth = cell.month;
-        this.updateVisibleCells();
-      } else if (cell.type === 'day') {
-        // 日视图点击打开详情弹窗
-        this.selectedCell = cell;
-        this.loadCellEvents(cell);
-        if (this.$refs.cellDetailPopup) {
-          this.$refs.cellDetailPopup.open();
-        }
+      // if (cell.type === 'year') {
+      //   // 年视图点击进入对应月视图
+      //   this.currentDimension = 'month';
+      //   this.currentYear = cell.year;
+      //   this.updateVisibleCells();
+      // } else if (cell.type === 'month') {
+      //   // 月视图点击进入对应日视图
+      //   this.currentDimension = 'day';
+      //   this.currentYear = cell.year;
+      //   this.currentMonth = cell.month;
+      //   this.updateVisibleCells();
+      // } else if (cell.type === 'day') {
+      //   // 日视图点击打开详情弹窗
+      //   this.selectedCell = cell;
+      //   this.loadCellEvents(cell);
+      //   if (this.$refs.cellDetailPopup) {
+      //     this.$refs.cellDetailPopup.open();
+      //   }
+      // }
+      // 日视图点击打开详情弹窗
+      this.selectedCell = cell;
+      this.loadCellEvents(cell);
+      if (this.$refs.cellDetailPopup) {
+        this.$refs.cellDetailPopup.open();
       }
     },
 
@@ -992,6 +1034,28 @@ export default {
         this.enableEventEditing(index);
       }
     },
+
+    handleFullscreenClick(cell) {
+      if (this.currentDimension === 'day') {
+        uni.navigateTo({
+          url: '/pages/detail/detail?date=' + cell.year + '-' + (cell.month + 1) + '-' + cell.day
+        });
+        return;
+      }
+      // 根据当前视图类型切换视图
+      switch (this.currentDimension) {
+        case 'month':
+          this.currentYear = cell.year;
+          this.currentMonth = cell.month;
+          this.currentDimension = 'day';
+          break;
+        case 'year':
+          this.currentYear = cell.year;
+          this.currentDimension = 'month';
+          break;
+      }
+      this.updateVisibleCells();
+    },
     deleteEvent(index) {
       this.cellEvents.splice(index, 1);
       // 删除事项后自动保存
@@ -1067,7 +1131,7 @@ export default {
 
 
 /* 修改时期标签样式 */
-.stage-mark {
+.year-stage-mark {
   position: absolute;
   top: 0;
   /* 改为固定的上边距 */

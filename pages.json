@@ -27,15 +27,8 @@
         "navigationBarTitleText": "分享",
         "navigationStyle": "custom"
       }
-    },
-    {
-    	"path" : "pages/home/home",
-    	"style" : 
-    	{
-    		"navigationBarTitleText" : "我的人生格子",
-         "navigationStyle": "custom"
-    	}
     }
+    
   ],
   "globalStyle": {
     "navigationBarTextStyle": "black",

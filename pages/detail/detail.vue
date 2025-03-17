@@ -130,7 +130,7 @@
     </view>
     
     <!-- 标签选择器弹窗 -->
-    <uni-popup ref="tagSelector" type="bottom">
+    <custom-popup ref="tagSelector" type="bottom">
       <view class="tag-selector">
         <view class="tag-selector-header">
           <text class="tag-selector-title">选择标签</text>
@@ -148,10 +148,10 @@
           </view>
         </view>
       </view>
-    </uni-popup>
+    </custom-popup>
     
     <!-- 录音弹窗 -->
-    <uni-popup ref="voiceRecorder" type="center">
+    <custom-popup ref="voiceRecorder" type="center">
       <view class="voice-recorder">
         <view class="recorder-header">
           <text class="recorder-title">录制语音</text>
@@ -164,7 +164,7 @@
           </view>
         </view>
       </view>
-    </uni-popup>
+    </custom-popup>
   </view>
 </template>
 
