@@ -12,8 +12,19 @@
         <view class="setting-item">
           <text class="setting-label">背景图片</text>
           <view class="setting-value">
-            <view class="bg-preview" :style="{ backgroundImage: `url(${backgroundImage})` }"></view>
+            <view class="bg-preview" :style="{ backgroundImage: backgroundImage ? `url(${backgroundImage})` : 'none' }"></view>
             <button class="upload-btn" @click="chooseBackgroundImage">更换背景</button>
+            <button class="clear-btn" @click="clearBackgroundImage">取消背景</button>
+          </view>
+        </view>
+
+        <view class="setting-item">
+          <text class="setting-label">主题模式</text>
+          <view class="setting-value">
+            <view class="theme-switch" @click="toggleTheme">
+              <view class="theme-icon">{{ themeMode === 'light' ? '🌞' : '🌙' }}</view>
+              <text>{{ themeMode === 'light' ? '白天模式' : '黑夜模式' }}</text>
+            </view>
           </view>
         </view>
         
@@ -96,8 +107,9 @@ export default {
       backgroundMusic: '',
       isPlaying: false,
       audioContext: null,
+      themeMode: 'light',
       
-      particleEffects: ['无', '雪花', '花瓣', '爱心', '流星', '火焰', '下雨'],
+      particleEffects: ['无', '雪花', '花瓣', '爱心', '流星', '火焰', '下雨', '鹅毛', '星光', '树叶', '钻石'],
       particleEffectIndex: 0
     };
   },
@@ -131,7 +143,8 @@ export default {
       const settings = {
         backgroundImage: this.backgroundImage,
         backgroundMusic: this.backgroundMusic,
-        particleEffect: this.particleEffects[this.particleEffectIndex]
+        particleEffect: this.particleEffects[this.particleEffectIndex],
+        themeMode: this.themeMode
       };
       
       uni.setStorageSync('lifeGridSettings', settings);
@@ -144,6 +157,16 @@ export default {
           this.backgroundImage = res.tempFilePaths[0];
         }
       });
+    },
+
+    clearBackgroundImage() {
+      this.backgroundImage = '';
+    },
+
+    toggleTheme() {
+      this.themeMode = this.themeMode === 'light' ? 'dark' : 'light';
+      // 应用主题样式
+      document.documentElement.setAttribute('data-theme', this.themeMode);
     },
     
     chooseBackgroundMusic() {
@@ -162,9 +185,9 @@ export default {
           } else {
             // 设置背景音乐
             const musicPaths = [
-              '/static/music/relaxing1.mp3',
-              '/static/music/relaxing2.mp3',
-              '/static/music/nostalgic.mp3'
+              // '/static/music/relaxing1.mp3',
+              // '/static/music/relaxing2.mp3',
+              // '/static/music/nostalgic.mp3'
             ];
             this.backgroundMusic = musicPaths[res.tapIndex];
             
@@ -311,11 +334,6 @@ export default {
     },
     
     clearAllData() {
-      try {
-        uni.clearStorageSync();
-        
-        // 重置当前设置
-        this.  {
       try {
         uni.clearStorageSync();
         
@@ -578,6 +596,110 @@ export default {
   width: 2px !important;
   height: 15px !important;
   box-shadow: 0 0 5px rgba(30, 144, 255, 0.5);
+}
+
+/* 鹅毛特效 */
+.particle-鹅毛 {
+  background-color: white;
+  border-radius: 50% 0 50% 50%;
+  transform: rotate(-45deg);
+  opacity: 0.9;
+  box-shadow: 0 0 3px rgba(255, 255, 255, 0.6);
+}
+
+/* 星光特效 */
+.particle-星光 {
+  background: radial-gradient(circle, #fff, transparent);
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+  opacity: 0.8;
+  box-shadow: 0 0 8px rgba(255, 255, 0, 0.8);
+}
+
+/* 树叶特效 */
+.particle-树叶 {
+  background-color: #4CAF50;
+  clip-path: path('M10,0 C15,0 20,5 20,10 C20,15 15,20 10,20 C5,20 0,15 0,10 C0,5 5,0 10,0 Z');
+  opacity: 0.8;
+  animation: sway 3s ease-in-out infinite alternate;
+}
+
+/* 钻石特效 */
+.particle-钻石 {
+  background: linear-gradient(45deg, #00ffff, #ffffff);
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  opacity: 0.8;
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.8);
+}
+
+@keyframes sway {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(45deg);
+  }
+}
+
+/* 主题相关样式 */
+[data-theme='dark'] .container {
+  background-color: #1a1a1a;
+}
+
+[data-theme='dark'] .header {
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+[data-theme='dark'] .settings-content {
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+[data-theme='dark'] .settings-section {
+  background-color: #2d2d2d;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme='dark'] .setting-label,
+[data-theme='dark'] .title,
+[data-theme='dark'] .app-name {
+  color: #ffffff;
+}
+
+[data-theme='dark'] .app-version,
+[data-theme='dark'] .app-description {
+  color: #888888;
+}
+
+.theme-switch {
+  display: flex;
+  align-items: center;
+  padding: 8px 15px;
+  background-color: #f0f0f0;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+[data-theme='dark'] .theme-switch {
+  background-color: #3d3d3d;
+  color: #ffffff;
+}
+
+.theme-icon {
+  margin-right: 8px;
+  font-size: 18px;
+}
+
+.clear-btn {
+  margin-left: 8px;
+  padding: 8px 15px;
+  border-radius: 5px;
+  font-size: 14px;
+  background-color: #f5f5f5;
+  color: #666;
+}
+
+[data-theme='dark'] .clear-btn {
+  background-color: #3d3d3d;
+  color: #ffffff;
 }
 </style>
 

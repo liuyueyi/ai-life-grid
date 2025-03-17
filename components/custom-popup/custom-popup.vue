@@ -1,7 +1,7 @@
 <template>
   <view class="custom-popup" :class="{ 'popup-show': visible }" @tap.stop="handleMaskClick">
-    <view class="popup-mask"></view>
-    <view class="popup-container" :class="{ 'popup-center': type === 'center' }">
+    <view class="popup-mask" @tap.stop="handleMaskClick"></view>
+    <view class="popup-content" @tap.stop>
       <slot></slot>
     </view>
   </view>
@@ -69,21 +69,16 @@ export default {
   backdrop-filter: blur(4rpx);
 }
 
-.popup-container {
+.popup-content {
   position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   opacity: 0;
-  transform: scale(0.8);
   transition: all 0.3s;
 }
 
-.popup-center {
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) scale(0.8);
-}
-
-.popup-show .popup-container {
+.popup-show .popup-content {
   opacity: 1;
-  transform: translate(-50%, -50%) scale(1);
 }
 </style>

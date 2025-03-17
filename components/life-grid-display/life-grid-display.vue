@@ -356,6 +356,10 @@ export default {
 <style>
 .life-grid-display {
   width: 100%;
+  height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .grid {
@@ -364,6 +368,9 @@ export default {
   padding: 10rpx;
   width: 100%;
   box-sizing: border-box;
+  overflow-y: auto;
+  flex: 1;
+  -webkit-overflow-scrolling: touch;
 }
 
 .grid-cols-5 {

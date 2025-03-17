@@ -1,38 +1,57 @@
 <script>
 export default {
   globalData: {
-    bgm: null
+    bgm: null,
+    themeMode: 'light',
+    particleEffect: '无'
   },
-  onLaunch: function() {
+  onLaunch: function () {
     console.log('App Launch');
-    
+
     // 初始化全局数据
     this.globalData = {
-      bgm: null
+      bgm: null,
+      themeMode: 'light',
+      particleEffect: '无'
     };
-    
+
     // 加载设置
     const settings = uni.getStorageSync('lifeGridSettings');
-    if (settings && settings.backgroundMusic) {
-      // 创建背景音乐
-      const bgm = uni.createInnerAudioContext();
-      bgm.autoplay = true;
-      bgm.loop = true;
-      bgm.src = settings.backgroundMusic;
-      
-      // 保存到全局
-      this.globalData.bgm = bgm;
+    if (settings) {
+      // 设置主题模式
+      if (settings.themeMode) {
+        this.globalData.themeMode = settings.themeMode;
+        // 应用主题样式
+        document.documentElement.setAttribute('data-theme', settings.themeMode);
+      }
+
+      // 设置粒子特效
+      if (settings.particleEffect) {
+        this.globalData.particleEffect = settings.particleEffect;
+      }
+
+      // 设置背景音乐
+      if (settings.backgroundMusic) {
+        // 创建背景音乐
+        const bgm = uni.createInnerAudioContext();
+        bgm.autoplay = true;
+        bgm.loop = true;
+        bgm.src = settings.backgroundMusic;
+
+        // 保存到全局
+        this.globalData.bgm = bgm;
+      }
     }
   },
-  onShow: function() {
+  onShow: function () {
     console.log('App Show');
-    
+
     // 恢复背景音乐播放
     if (this.globalData.bgm) {
       this.globalData.bgm.play();
     }
   },
-  onHide: function() {
+  onHide: function () {
     console.log('App Hide');
   }
 };
@@ -69,4 +88,3 @@ page {
   background-color: transparent;
 }
 </style>
-

@@ -211,6 +211,11 @@ export default {
     };
   },
   onLoad(options) {
+    // 获取全局主题和特效设置
+    const app = getApp();
+    this.themeMode = app.globalData.themeMode;
+    this.particleEffect = app.globalData.particleEffect;
+    
     // 获取页面参数
     this.cellType = options.type || 'day';
     this.cellYear = parseInt(options.year) || new Date().getFullYear();
