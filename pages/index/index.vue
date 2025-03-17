@@ -60,25 +60,19 @@
     <view v-else class="life-grid-container">
       <view class="grid-controls">
         <view class="dimension-selector">
-          <text 
-            v-for="(dim, index) in dimensions" 
-            :key="index" 
-            :class="['dimension-option', currentDimension === dim ? 'active' : '']"
-            @click="changeDimension(dim)"
-          >
+          <text v-for="(dim, index) in dimensions" :key="index"
+            :class="['dimension-option', currentDimension === dim ? 'active' : '']" @click="changeDimension(dim)">
             {{ dimensionLabels[dim] }}
           </text>
         </view>
-        
+
         <view class="view-controls">
-          <text 
-            v-for="(view, index) in viewOptions" 
-            :key="index" 
-            :class="['view-option', currentView === view ? 'active' : '']"
-            @click="changeView(view)"
-          >
+          <!-- <text v-for="(view, index) in viewOptions" :key="index"
+            :class="['view-option', currentView === view ? 'active' : '']" @click="changeView(view)">
             {{ viewLabels[view] }}
-          </text>
+          </text> -->
+          <text class="view-option" @click="openSettings">设置</text>
+          <text class="view-option" @click="shareLifeGrid">分享</text>
         </view>
       </view>
 
@@ -115,17 +109,17 @@
         <button class="nav-btn" @click="navigateNext">下一{{ getNavigationUnit() }}</button>
       </view>
        -->
-      <view class="bottom-controls">
+      <!-- <view class="bottom-controls">
         <button class="settings-btn" @click="openSettings">设置</button>
         <button class="share-btn" @click="shareLifeGrid">分享</button>
-      </view>
+      </view> -->
     </view>
 
     <!-- 格子详情弹窗 -->
     <custom-popup ref="cellDetailPopup" type="center">
       <view class="cell-detail-popup">
         <view class="popup-header">
-          <text class="popup-title">{{ selectedCell ? getCellLabel(selectedCell) : '' }}</text>
+          <text class="popup-title">{{ selectedCell ? showPopupTitle(selectedCell) : '' }}</text>
           <text class="popup-close" @click="closeCellDetail">×</text>
         </view>
         <view class="popup-content">
@@ -137,6 +131,10 @@
               <text class="delete-event" @click="deleteEvent(index)">×</text>
             </view>
             <button class="add-event-btn" @click="addNewEvent">添加事项</button>
+          </view>
+          <view class="button-group">
+            <button class="cancel-btn" @click="cancelChanges">取消</button>
+            <button class="save-btn" @click="saveChanges">保存</button>
           </view>
           <button class="view-detail-btn" @click="viewFullDetail">查看详情</button>
         </view>
@@ -165,7 +163,7 @@ export default {
       lifeExpectancyIndex: 2, // 默认80岁
 
       // 生命格子相关
-      dimensions: ['year', 'month', 'week', 'day'],
+      dimensions: ['year', 'month', 'day'],
       dimensionLabels: {
         year: '年',
         month: '月',
@@ -201,7 +199,9 @@ export default {
       backgroundMusic: '',
       particleEffect: '无',
       themeMode: 'light',
-      initialized: false
+      initialized: false,
+
+      tempEvents: [], // 用于存储临时修改的事件
     };
   },
   onLoad() {
@@ -646,6 +646,9 @@ export default {
         return 'retirement';
       }
     },
+    showPopupTitle(cell) {
+      return `${cell.year}年${cell.month + 1}月${cell.day}日`;
+    },
 
     getCellLabel(cell) {
       let label = '';
@@ -855,11 +858,58 @@ export default {
     },
 
     loadCellEvents(cell) {
-      // 从本地存储加载该格子的事件
       const key = this.getCellStorageKey(cell);
       const events = uni.getStorageSync(key) || [];
-      this.cellEvents = events;
+      // 为每个事件添加编辑状态标记
+      this.cellEvents = events.map(event => ({
+        ...event,
+        isEditing: false,
+        isNew: false
+      }));
+      // 保存一份临时副本
+      this.tempEvents = JSON.parse(JSON.stringify(this.cellEvents));
     },
+    enableEventEditing(index) {
+      console.log('设置为编辑状态', index);
+      // 移除 isNew 的判断，让所有事项都可以编辑
+      this.cellEvents[index].isEditing = true;
+      // 强制更新视图
+      this.$forceUpdate();
+    },
+    addNewEvent() {
+      this.cellEvents.push({
+        id: Date.now(),
+        content: '', // 空内容
+        tags: [],
+        isEditing: true, // 新事项默认可编辑
+        isNew: true
+      });
+    },
+
+    cancelChanges() {
+      // 恢复到原始状态
+      this.cellEvents = JSON.parse(JSON.stringify(this.tempEvents));
+      this.closeCellDetail();
+    },
+    saveChanges() {
+      if (!this.selectedCell) return;
+
+      // 过滤掉空事件并移除临时状态标记
+      const validEvents = this.cellEvents
+        .filter(event => event.content.trim() !== '')
+        .map(({ isEditing, isNew, ...event }) => event);
+
+      // 保存到本地存储
+      const key = this.getCellStorageKey(this.selectedCell);
+      uni.setStorageSync(key, validEvents);
+
+      // 更新格子的事件标记
+      this.updateCellEventIndicator(this.selectedCell, validEvents.length > 0);
+
+      // 关闭弹窗
+      this.closeCellDetail();
+    },
+
 
     saveCellEvents() {
       if (!this.selectedCell) return;
@@ -935,15 +985,13 @@ export default {
         }
       }
     },
-
-    addNewEvent() {
-      this.cellEvents.push({
-        id: Date.now(),
-        content: '',
-        tags: []
-      });
+    handleEventClick(index, event) {
+      console.log('点击了事件', index, event);
+      // 如果有内容，则进入编辑状态
+      if (event.content) {
+        this.enableEventEditing(index);
+      }
     },
-
     deleteEvent(index) {
       this.cellEvents.splice(index, 1);
       // 删除事项后自动保存
@@ -953,7 +1001,7 @@ export default {
     // 监听事项内容变化
     onEventContentChange() {
       // 自动保存事项
-      this.saveCellEvents();
+      // this.saveCellEvents();
     },
 
     viewFullDetail() {
@@ -1015,293 +1063,26 @@ export default {
 </script>
 
 <style>
-.container {
-  width: 100%;
-  height: 100vh;
-  background-size: cover;
-  background-position: center;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
+@import './index.css';
 
-/* 初始化表单样式 */
-.setup-container {
-  width: 90%;
-  max-width: 600px;
-  background-color: rgba(255, 255, 255, 0.95);
-  border-radius: 20px;
-  padding: 30px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
-}
-
-.setup-title {
-  font-size: 28px;
-  font-weight: bold;
-  text-align: center;
-  margin-bottom: 35px;
-  color: #333;
-  letter-spacing: 2px;
-}
-
-.setup-form {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.form-item {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.label {
-  font-size: 16px;
-  color: #444;
-  font-weight: 500;
-  margin-left: 4px;
-}
-
-.picker-value {
-  height: 44px;
-  line-height: 44px;
-  padding: 0 16px;
-  background-color: #f8f8f8;
-  border-radius: 12px;
-  color: #333;
-  font-size: 15px;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
-}
-
-.submit-btn {
-  margin-top: 30px;
-  height: 48px;
-  line-height: 48px;
-  background: linear-gradient(135deg, #9b59b6, #8e44ad);
-  color: white;
-  border-radius: 12px;
-  font-size: 17px;
-  font-weight: 500;
-  letter-spacing: 1px;
-  box-shadow: 0 4px 12px rgba(142, 68, 173, 0.3);
-  transition: all 0.3s ease;
-}
-
-.submit-btn:active {
-  transform: translateY(1px);
-  box-shadow: 0 2px 8px rgba(142, 68, 173, 0.2);
-}
-
-/* 生命格子样式 */
-.life-grid-container {
-  width: 100%;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  padding: 10px;
-}
-
-.grid-controls {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 15px;
-  background-color: rgba(255, 255, 255, 0.8);
-  border-radius: 10px;
-  padding: 10px;
-}
-
-.dimension-selector,
-.view-controls {
-  display: flex;
-  gap: 10px;
-}
-
-.dimension-option,
-.view-option {
-  padding: 5px 15px;
-  border-radius: 15px;
-  background-color: #f0f0f0;
-  color: #555;
-}
-
-.dimension-option.active,
-.view-option.active {
-  background-color: #8e44ad;
-  color: white;
-}
-
-.grid-scroll-view {
-  flex: 1;
-  width: 100%;
-}
-
-.grid-header {
-  padding: 15px;
-  background-color: rgba(255, 255, 255, 0.8);
-  border-radius: 10px;
-  margin-bottom: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.nav-arrow {
-  font-size: 20px;
-  color: #666;
-  padding: 0 15px;
-  cursor: pointer;
-}
-
-.header-text {
-  font-size: 18px;
-  font-weight: bold;
-  color: #333;
-}
-
-.weekday-header {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 5px;
-  margin-bottom: 5px;
-  padding: 0 10px;
-}
-
-.weekday-label {
-  text-align: center;
-  font-size: 14px;
-  color: #666;
-}
-
-.grid-wrapper {
-  padding: 10px;
-}
-
-.grid-container {
-  display: grid;
-  gap: 5px;
-  padding: 10px;
-  height: calc(100vh - 200px);
-}
-
-.grid-container.month-view {
-  grid-template-columns: repeat(3, 1fr);
-  grid-auto-rows: minmax(min-content, 1fr);
-  gap: 15px;
-}
-
-.grid-container.week-view {
-  grid-template-columns: repeat(7, 1fr);
-  grid-template-rows: 1fr;
-}
-
-.grid-container.day-view {
-  grid-template-columns: repeat(7, 1fr);
-  grid-auto-rows: minmax(min-content, 1fr);
-  gap: 10px;
-}
-
-.grid-container.year-view {
-  grid-template-columns: repeat(5, 1fr);
-  grid-auto-rows: minmax(min-content, 1fr);
-  gap: 10px;
-}
-
-.grid-cell {
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  width: 100%;
-  height: 100%;
-  min-height: 60px;
-  overflow: visible; /* 添加此行以确保 stage-mark 可以显示在格子外部 */
-}
-
-.grid-cell.calendar-cell {
-  width: 100%;
-  height: 100%;
-}
-
-/* 格子阶段颜色 */
-.grid-cell.stage-childhood {
-  background-color: rgba(173, 216, 230, 0.7);
-  color: #333;
-}
-
-.grid-cell.stage-education {
-  background-color: rgba(144, 238, 144, 0.7);
-  color: #333;
-}
-
-.grid-cell.stage-work {
-  background-color: rgba(255, 255, 224, 0.7);
-  color: #333;
-}
-
-.grid-cell.stage-retirement {
-  background-color: rgba(255, 218, 185, 0.7);
-  color: #333;
-}
-
-/* 添加时间状态相关样式 */
-.grid-cell.time-past {
-  filter: grayscale(40%);
-  opacity: 0.8;
-  background-color: rgba(200, 200, 200, 0.7);
-}
-
-.grid-cell.time-present {
-  filter: none;
-  opacity: 1;
-  box-shadow: 0 0 15px rgba(142, 68, 173, 0.3);
-  border: 2px solid #8e44ad;
-  transform: scale(1.02);
-  z-index: 1;
-}
-
-.grid-cell.time-future {
-  filter: hue-rotate(210deg);
-  opacity: 0.9;
-  background-color: rgba(176, 196, 222, 0.7);
-}
-
-/* 其他月份的日期特殊处理 */
-.grid-cell.stage-other-month {
-  opacity: 0.3;
-  background-color: rgba(200, 200, 200, 0.5);
-}
-
-
-.cell-content {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  width: 100%;
-  height: 100%;
-}
 
 /* 修改时期标签样式 */
 .stage-mark {
   position: absolute;
-  top: 0;  /* 改为固定的上边距 */
-  left: 0;   /* 从左边开始 */
-  right: 0;  /* 延伸到右边 */
-  margin: 0 auto; /* 水平居中 */
+  top: 0;
+  /* 改为固定的上边距 */
+  left: 0;
+  /* 从左边开始 */
+  right: 0;
+  /* 延伸到右边 */
+  margin: 0 auto;
+  /* 水平居中 */
   background: linear-gradient(to right, #ec4899, #8b5cf6);
   color: white;
-  font-size: 10px;  /* 使用固定的字体大小 */
-  padding: 2px 0;   /* 只保留垂直方向的内边距 */
+  font-size: 10px;
+  /* 使用固定的字体大小 */
+  padding: 2px 0;
+  /* 只保留垂直方向的内边距 */
   text-align: center;
   border-radius: 10px 10px 0 0;
   white-space: nowrap;
@@ -1309,216 +1090,9 @@ export default {
   text-overflow: ellipsis;
   z-index: 2;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  width: 100%;  /* 设置宽度为格子的90% */
-  transform: none;  /* 移除之前的transform */
-}
-
-.cell-label {
-  font-size: min(14px, 3.5vw);
-  font-weight: bold;
-  max-width: 90%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: #333;
-  margin-top: 15px;
-  /* 为上方的时期标签留出空间 */
-}
-
-.detail-button {
-  position: absolute;
-  top: 5px;
-  right: 5px;
-  width: 24px;
-  height: 24px;
-  border-radius: 12px;
-  background-color: rgba(255, 255, 255, 0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  z-index: 2;
-}
-
-.detail-icon {
-  font-size: 14px;
-  color: #666;
-}
-
-.cell-label {
-  font-size: min(14px, 3.5vw);
-  font-weight: bold;
-  max-width: 90%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: #333;
-}
-
-.cell-event-indicator {
-  position: absolute;
-  bottom: 8px;
-  font-size: 20px;
-  color: #e74c3c;
-}
-
-/* 格子阶段颜色 */
-.grid-cell.stage-childhood {
-  background-color: rgba(173, 216, 230, 0.7);
-  /* 婴儿期浅蓝 */
-  color: #333;
-}
-
-.grid-cell.stage-education {
-  background-color: rgba(144, 238, 144, 0.7);
-  /* 幼儿期浅绿 */
-  color: #333;
-}
-
-.grid-cell.stage-work {
-  background-color: rgba(255, 255, 224, 0.7);
-  /* 少年期浅黄 */
-  color: #333;
-}
-
-.grid-cell.stage-retirement {
-  background-color: rgba(255, 218, 185, 0.7);
-  /* 退休期浅橙 */
-  color: #333;
-}
-
-.grid-cell.stage-other-month {
-  opacity: 0.3;
-}
-
-.cell-event-indicator {
-  position: absolute;
-  bottom: 4px;
-  right: 4px;
-  min-width: 18px;
-  height: 18px;
-  line-height: 18px;
-  text-align: center;
-  font-size: 12px;
-  background-color: #e74c3c;
-  color: white;
-  border-radius: 9px;
-  padding: 0 4px;
-}
-
-.navigation-controls {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 15px;
-  padding: 10px;
-  background-color: rgba(255, 255, 255, 0.8);
-  border-radius: 10px;
-}
-
-.nav-btn {
-  flex: 1;
-  margin: 0 5px;
-  height: 40px;
-  line-height: 40px;
-  background-color: #8e44ad;
-  color: white;
-  border-radius: 8px;
-  font-size: 14px;
-}
-
-.bottom-controls {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 15px;
-  padding: 10px;
-}
-
-.settings-btn,
-.share-btn {
-  width: 48%;
-  height: 45px;
-  line-height: 45px;
-  background-color: rgba(255, 255, 255, 0.8);
-  color: #333;
-  border-radius: 8px;
-  font-size: 16px;
-}
-
-/* 弹窗样式 */
-.cell-detail-popup {
-  width: 300px;
-  background-color: white;
-  border-radius: 15px;
-  overflow: hidden;
-}
-
-.popup-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 15px;
-  background-color: #8e44ad;
-  color: white;
-}
-
-.popup-title {
-  font-size: 16px;
-  font-weight: bold;
-}
-
-.popup-close {
-  font-size: 20px;
-  font-weight: bold;
-}
-
-.popup-content {
-  padding: 15px;
-}
-
-.section-title {
-  font-size: 16px;
-  font-weight: bold;
-  margin-bottom: 10px;
-  color: #333;
-}
-
-.event-item {
-  display: flex;
-  align-items: center;
-  margin-bottom: 10px;
-}
-
-.event-item input {
-  flex: 1;
-  height: 35px;
-  padding: 0 10px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-}
-
-.delete-event {
-  margin-left: 10px;
-  font-size: 18px;
-  color: #e74c3c;
-}
-
-.add-event-btn {
   width: 100%;
-  height: 35px;
-  line-height: 35px;
-  background-color: #f0f0f0;
-  color: #333;
-  border-radius: 5px;
-  margin-top: 10px;
-}
-
-.view-detail-btn {
-  width: 100%;
-  height: 40px;
-  line-height: 40px;
-  background-color: #8e44ad;
-  color: white;
-  border-radius: 5px;
-  margin-top: 20px;
+  /* 设置宽度为格子的90% */
+  transform: none;
+  /* 移除之前的transform */
 }
 </style>
