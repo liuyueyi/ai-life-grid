@@ -77,10 +77,12 @@
       </view>
 
       <view class="grid-header">
-        <text class="nav-arrow" @click="navigatePrevious">◀</text>
+        <text class="nav-arrow" @click="navigatePrevious" v-if="this.currentDimension != 'year'">◀</text>
+        <text v-else></text>
         <text class="header-text" @click="toggleDimension">{{ currentDimension === 'day' ?
     `${currentYear}年${currentMonth + 1}月` : currentDimension === 'year' ? '我的人生格子' : currentYear + '年' }}</text>
-        <text class="nav-arrow" @click="navigateNext">▶</text>
+        <text class="nav-arrow" @click="navigateNext" v-if="this.currentDimension != 'year'">▶</text>
+        <text v-else></text>
       </view>
       <scroll-view class="grid-scroll-view" :scroll-y="true" @scroll="onGridScroll" :show-scrollbar="false"
         :scroll-top="scrollPosition" :enhanced="true" :bounces="true">
@@ -749,20 +751,12 @@ export default {
     },
 
     navigatePrevious() {
-      const now = new Date();
-
       switch (this.currentDimension) {
         case 'year':
-          // 前移一年
-          this.currentYear--;
           break;
         case 'month':
-          if (this.currentMonth === 0) {
-            this.currentYear--;
-            this.currentMonth = 11;
-          } else {
-            this.currentMonth--;
-          }
+          // 前移一年
+          this.currentYear--;
           break;
         case 'day':
           if (this.currentMonth === 0) {
@@ -777,20 +771,14 @@ export default {
     },
 
     navigateNext() {
-      const now = new Date();
-
       switch (this.currentDimension) {
         case 'year':
-          // 后移一年
-          this.currentYear++;
+          // 年视图，不支持左右切换
+          
           break;
         case 'month':
-          if (this.currentMonth === 11) {
-            this.currentYear++;
-            this.currentMonth = 0;
-          } else {
-            this.currentMonth++;
-          }
+          // 后移一年
+          this.currentYear++;
           break;
         case 'day':
           if (this.currentMonth === 11) {
