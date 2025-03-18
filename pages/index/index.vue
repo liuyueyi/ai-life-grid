@@ -1,60 +1,7 @@
 <template>
   <view class="container" :style="{ backgroundImage: `url(${backgroundImage})` }" :data-theme="themeMode">
-    <!-- 粒子特效容器 -->
-    <!-- <view v-if="particleEffect !== '无'" class="particle-container">
-      <view v-for="i in 30" :key="i" 
-            :class="['particle', `particle-${particleEffect.toLowerCase()}`]"
-            :style="getRandomParticleStyle()">
-      </view>
-    </view> -->
-    <view v-if="!initialized" class="setup-container">
-      <view class="setup-title">人生格子</view>
-      <view class="setup-form">
-        <view class="form-item">
-          <text class="label">出生日期</text>
-          <picker mode="date" :value="birthDate" @change="onBirthDateChange">
-            <view class="picker-value">{{ birthDate || '请选择出生日期' }}</view>
-          </picker>
-        </view>
-
-        <view class="form-item">
-          <text class="label">上学开始时间</text>
-          <picker mode="date" fields="month" :value="schoolStartDate" @change="onSchoolStartChange">
-            <view class="picker-value">{{ schoolStartDate || '请选择上学开始时间' }}</view>
-          </picker>
-        </view>
-
-        <view class="form-item">
-          <text class="label">学历范围</text>
-          <picker :range="educationLevels" :value="educationLevelIndex" @change="onEducationLevelChange">
-            <view class="picker-value">{{ educationLevels[educationLevelIndex] || '请选择学历范围' }}</view>
-          </picker>
-        </view>
-
-        <view class="form-item">
-          <text class="label">工作开始时间</text>
-          <picker mode="date" fields="month" :value="workStartDate" @change="onWorkStartChange">
-            <view class="picker-value">{{ workStartDate || '请选择工作开始时间' }}</view>
-          </picker>
-        </view>
-
-        <view class="form-item">
-          <text class="label">预计退休时间</text>
-          <picker mode="date" fields="month" :value="retirementDate" @change="onRetirementChange">
-            <view class="picker-value">{{ retirementDate || '请选择预计退休时间' }}</view>
-          </picker>
-        </view>
-
-        <view class="form-item">
-          <text class="label">预计寿命</text>
-          <picker mode="selector" :range="lifeExpectancyOptions" :value="lifeExpectancyIndex"
-            @change="onLifeExpectancyChange">
-            <view class="picker-value">{{ lifeExpectancyOptions[lifeExpectancyIndex] || '请选择预计寿命' }}</view>
-          </picker>
-        </view>
-
-        <button class="submit-btn" @click="initializeLifeGrid">开始我的人生格子</button>
-      </view>
+    <view v-if="!initialized">
+      <init-form @initialize="handleInitialize"></init-form>
     </view>
 
     <view v-else class="life-grid-container">
@@ -149,10 +96,12 @@
 
 <script>
 import CustomPopup from '@/components/custom-popup/custom-popup.vue'
+import InitForm from '@/components/init-form/init-form.vue'
 
 export default {
   components: {
-    CustomPopup
+    CustomPopup,
+    InitForm
   },
   data() {
     return {
@@ -160,12 +109,10 @@ export default {
       initialized: false,
       birthDate: '',
       schoolStartDate: '',
-      educationLevels: ['小学', '初中', '高中', '职高', '大专', '大学', '硕士', '博士'],
-      educationLevelIndex: 5, // 默认大学
+      educationLevel: '',
       workStartDate: '',
       retirementDate: '',
-      lifeExpectancyOptions: ['70岁', '75岁', '80岁', '85岁', '90岁', '95岁', '100岁'],
-      lifeExpectancyIndex: 2, // 默认80岁
+      lifeExpectancy: '',
 
       // 生命格子相关
       dimensions: ['year', 'month', 'day'],
@@ -245,22 +192,6 @@ export default {
         this.handleCellClick(currentCell)
       }
     }
-
-    // 加载自定义设置
-    const settings = uni.getStorageSync('lifeGridSettings');
-    if (settings) {
-      this.backgroundImage = settings.backgroundImage || this.backgroundImage;
-      this.backgroundMusic = settings.backgroundMusic || '';
-      this.particleEffect = settings.particleEffect || 'none';
-
-      // 播放背景音乐
-      if (this.backgroundMusic) {
-        this.playBackgroundMusic();
-      }
-
-      // 初始化粒子效果
-      this.initParticleEffect();
-    }
   },
   methods: {
     handleCellClick(cell) {
@@ -286,63 +217,19 @@ export default {
         this.selectedCell = cell;
       }
     },
-    getRandomParticleStyle() {
-      const size = Math.floor(Math.random() * 20) + 10; // 10-30px
-      const left = Math.floor(Math.random() * 100); // 0-100%
-      const animationDuration = Math.floor(Math.random() * 10) + 5; // 5-15s
-      const animationDelay = Math.random() * 5; // 0-5s
-
-      return {
-        width: `${size}px`,
-        height: `${size}px`,
-        left: `${left}%`,
-        animationDuration: `${animationDuration}s`,
-        animationDelay: `${animationDelay}s`
-      };
-    },
-    // 初始化表单相关方法
-    onBirthDateChange(e) {
-      this.birthDate = e.detail.value;
-    },
-    onSchoolStartChange(e) {
-      this.schoolStartDate = e.detail.value;
-    },
-    onEducationLevelChange(e) {
-      this.educationLevelIndex = e.detail.value;
-    },
-    onWorkStartChange(e) {
-      this.workStartDate = e.detail.value;
-    },
-    onRetirementChange(e) {
-      this.retirementDate = e.detail.value;
-    },
-    onLifeExpectancyChange(e) {
-      this.lifeExpectancyIndex = e.detail.value;
-    },
-
-    initializeLifeGrid() {
-      // 验证所有必填项
-      if (!this.birthDate || !this.schoolStartDate || !this.workStartDate || !this.retirementDate) {
-        uni.showToast({
-          title: '请填写所有必要信息',
-          icon: 'none'
-        });
-        return;
-      }
-
+    // 处理初始化表单提交
+    handleInitialize(userData) {
       // 保存用户数据
-      const userData = {
-        birthDate: this.birthDate,
-        schoolStartDate: this.schoolStartDate,
-        educationLevel: this.educationLevels[this.educationLevelIndex],
-        workStartDate: this.workStartDate,
-        retirementDate: this.retirementDate,
-        lifeExpectancy: this.lifeExpectancyOptions[this.lifeExpectancyIndex]
-      };
-
+      this.birthDate = userData.birthDate;
+      this.schoolStartDate = userData.schoolStartDate;
+      this.educationLevel = userData.educationLevel;
+      this.workStartDate = userData.workStartDate;
+      this.retirementDate = userData.retirementDate;
+      this.lifeExpectancy = userData.lifeExpectancy;
+      
       uni.setStorageSync('lifeGridUserData', userData);
       this.initialized = true;
-
+      
       // 生成生命格子数据
       this.generateLifeGrid();
       this.updateVisibleCells();
@@ -351,16 +238,16 @@ export default {
     loadUserData(userData) {
       this.birthDate = userData.birthDate;
       this.schoolStartDate = userData.schoolStartDate;
-      this.educationLevelIndex = this.educationLevels.indexOf(userData.educationLevel);
+      this.educationLevel = userData.educationLevel;
       this.workStartDate = userData.workStartDate;
       this.retirementDate = userData.retirementDate;
-      this.lifeExpectancyIndex = this.lifeExpectancyOptions.indexOf(userData.lifeExpectancy);
+      this.lifeExpectancy = userData.lifeExpectancy;
     },
 
     // 生命格子相关方法
     generateLifeGrid() {
       const birthYear = new Date(this.birthDate).getFullYear();
-      const deathYear = birthYear + parseInt(this.lifeExpectancyOptions[this.lifeExpectancyIndex]);
+      const deathYear = birthYear + parseInt(this.lifeExpectancy);
       const schoolStartYear = new Date(this.schoolStartDate).getFullYear();
       const workStartYear = new Date(this.workStartDate).getFullYear();
       const retirementYear = new Date(this.retirementDate).getFullYear();
@@ -728,7 +615,6 @@ export default {
       }
     },
     showPopupTitle(cell) {
-      console.log('显示标题', cell);
       switch (this.currentDimension) {
         case 'year':
           return `${cell.year}年`;
@@ -863,7 +749,6 @@ export default {
       switch (this.currentDimension) {
         case 'year':
           // 年视图，不支持左右切换
-
           break;
         case 'month':
           // 后移一年
@@ -888,8 +773,6 @@ export default {
       this.updateVisibleCells();
     },
     updateVisibleCellsWithRange(range) {
-      const now = new Date();
-
       switch (this.currentDimension) {
         case 'year':
           if (range.start && range.end) {
@@ -972,7 +855,6 @@ export default {
       this.tempEvents = JSON.parse(JSON.stringify(this.cellEvents));
     },
     enableEventEditing(index) {
-      console.log('设置为编辑状态', index);
       // 移除 isNew 的判断，让所有事项都可以编辑
       this.cellEvents[index].isEditing = true;
       // 强制更新视图
@@ -1155,110 +1037,10 @@ export default {
         url: '/pages/share/share'
       });
     },
-
-    // 加载事件数据
-    loadEvents() {
-      // 遍历所有格子，检查是否有事件
-      this.lifeGridData.forEach(cell => {
-        const key = this.getCellStorageKey(cell);
-        const events = uni.getStorageSync(key) || [];
-        cell.hasEvents = events.length > 0;
-      });
-    },
-
-    // 背景音乐和粒子效果
-    playBackgroundMusic() {
-      if (!this.backgroundMusic) return;
-
-      const bgm = uni.createInnerAudioContext();
-      bgm.autoplay = true;
-      bgm.loop = true;
-      bgm.src = this.backgroundMusic;
-
-      // 保存到全局，以便其他页面可以控制
-      getApp().globalData.bgm = bgm;
-    },
-
-    initParticleEffect() {
-      // 粒子效果将在组件中实现
-    }
   }
 };
 </script>
 
 <style>
 @import './index.css';
-
-
-/* 修改时期标签样式 */
-.year-stage-mark {
-  position: absolute;
-  top: 0;
-  /* 改为固定的上边距 */
-  left: 0;
-  /* 从左边开始 */
-  right: 0;
-  /* 延伸到右边 */
-  margin: 0 auto;
-  /* 水平居中 */
-  background: linear-gradient(to right, #ec4899, #8b5cf6);
-  color: white;
-  font-size: 10px;
-  /* 使用固定的字体大小 */
-  padding: 2px 0;
-  /* 只保留垂直方向的内边距 */
-  text-align: center;
-  border-radius: 10px 10px 0 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  z-index: 2;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  width: 100%;
-  /* 设置宽度为格子的90% */
-  transform: none;
-  /* 移除之前的transform */
-}
-
-.floating-add-btn {
-  position: fixed;
-  right: 40rpx;
-  bottom: 40rpx;
-  width: 100rpx;
-  height: 100rpx;
-  background: linear-gradient(135deg, #ec4899, #8b5cf6);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4rpx 10rpx rgba(0, 0, 0, 0.2);
-  z-index: 100;
-}
-
-.floating-add-btn text {
-  color: #fff;
-  font-size: 60rpx;
-  font-weight: 300;
-}
-
-.floating-today-btn {
-  position: fixed;
-  right: 160rpx;
-  bottom: 40rpx;
-  width: 100rpx;
-  height: 100rpx;
-  background: linear-gradient(135deg, #ec4899, #8b5cf6);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4rpx 10rpx rgba(0, 0, 0, 0.2);
-  z-index: 100;
-}
-
-.floating-today-btn text {
-  color: #fff;
-  font-size: 40rpx;
-  font-weight: 500;
-}
 </style>
