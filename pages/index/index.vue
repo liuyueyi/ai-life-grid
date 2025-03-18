@@ -74,20 +74,12 @@
           <text class="popup-close" @click="closeCellDetail">×</text>
         </view>
         <view class="popup-content">
-          <view class="key-events-section">
-            <text class="section-title">关键事项</text>
-            <view v-for="(event, index) in cellEvents" :key="index" class="event-item">
-              <input type="text" v-model="cellEvents[index].content" placeholder="添加关键事项..."
-                @input="onEventContentChange" />
-              <text class="delete-event" @click="deleteEvent(index)">×</text>
-            </view>
-            <button class="add-event-btn" @click="addNewEvent">添加事项</button>
-          </view>
-          <view class="button-group">
-            <button class="cancel-btn" @click="cancelChanges">取消</button>
-            <button class="save-btn" @click="saveChanges">保存</button>
-          </view>
-          <button class="view-detail-btn" @click="viewFullDetail">查看详情</button>
+          <event-manager 
+            :visible="true"
+            :cell="selectedCell"
+            @save="saveChanges"
+            @cancel="cancelChanges"
+          />
         </view>
       </view>
     </custom-popup>
@@ -97,11 +89,15 @@
 <script>
 import CustomPopup from '@/components/custom-popup/custom-popup.vue'
 import InitForm from '@/components/init-form/init-form.vue'
+import EventManager from '@/components/event-manager/event-manager.vue'
+import TaskUtils from '../../utils/TaskUtils.js';
+
 
 export default {
   components: {
     CustomPopup,
-    InitForm
+    InitForm,
+    EventManager
   },
   data() {
     return {
@@ -359,14 +355,6 @@ export default {
           }
         }
       }
-
-
-      // 加载保存的事件数据并更新格子的事件指示器
-      this.lifeGridData.forEach(cell => {
-        const key = this.getCellStorageKey(cell);
-        const events = uni.getStorageSync(key) || [];
-        cell.hasEvents = events.length > 0;
-      });
     },
 
     getWeeksInMonth(year, month) {
@@ -407,9 +395,7 @@ export default {
 
           // 更新可见格子的事件指示器
           this.visibleCells.forEach(cell => {
-            const key = this.getCellStorageKey(cell);
-            const events = uni.getStorageSync(key) || [];
-            cell.hasEvents = events.length > 0;
+            cell.hasEvents = TaskUtils.hasEvents(cell)
           });
 
           // 为每个时期的第一个格子添加标记
@@ -438,9 +424,7 @@ export default {
 
           // 更新可见格子的事件指示器
           this.visibleCells.forEach(cell => {
-            const key = this.getCellStorageKey(cell);
-            const events = uni.getStorageSync(key) || [];
-            cell.hasEvents = events.length > 0;
+            cell.hasEvents = TaskUtils.hasEvents(cell)
           });
           break;
 
@@ -504,9 +488,7 @@ export default {
             }
 
             // 获取并更新事件指示器
-            const key = this.getCellStorageKey(cell);
-            const events = uni.getStorageSync(key) || [];
-            cell.hasEvents = events.length > 0;
+            cell.hasEvents = TaskUtils.hasEvents(cell)
 
             this.visibleCells.push(cell);
           }
@@ -828,7 +810,6 @@ export default {
         console.log('请选择一个cell');
         return;
       }
-      this.loadCellEvents(this.selectedCell);
       if (this.$refs.cellDetailPopup) {
         this.$refs.cellDetailPopup.open();
       }
@@ -838,38 +819,8 @@ export default {
       // 关闭弹窗
       if (this.$refs.cellDetailPopup) {
         this.$refs.cellDetailPopup.close();
-        this.cellEvents = [];
       }
     },
-
-    loadCellEvents(cell) {
-      const key = this.getCellStorageKey(cell);
-      const events = uni.getStorageSync(key) || [];
-      // 为每个事件添加编辑状态标记
-      this.cellEvents = events.map(event => ({
-        ...event,
-        isEditing: false,
-        isNew: false
-      }));
-      // 保存一份临时副本
-      this.tempEvents = JSON.parse(JSON.stringify(this.cellEvents));
-    },
-    enableEventEditing(index) {
-      // 移除 isNew 的判断，让所有事项都可以编辑
-      this.cellEvents[index].isEditing = true;
-      // 强制更新视图
-      this.$forceUpdate();
-    },
-    addNewEvent() {
-      this.cellEvents.push({
-        id: Date.now(),
-        content: '', // 空内容
-        tags: [],
-        isEditing: true, // 新事项默认可编辑
-        isNew: true
-      });
-    },
-
     cancelChanges() {
       // 恢复到原始状态
       this.cellEvents = JSON.parse(JSON.stringify(this.tempEvents));
@@ -877,51 +828,11 @@ export default {
     },
     saveChanges() {
       if (!this.selectedCell) return;
-
-      // 过滤掉空事件并移除临时状态标记
-      const validEvents = this.cellEvents
-        .filter(event => event.content.trim() !== '')
-        .map(({ isEditing, isNew, ...event }) => event);
-
-      // 保存到本地存储
-      const key = this.getCellStorageKey(this.selectedCell);
-      uni.setStorageSync(key, validEvents);
-
       // 更新格子的事件标记
-      this.updateCellEventIndicator(this.selectedCell, validEvents.length > 0);
+      this.updateCellEventIndicator(this.selectedCell, TaskUtils.hasEvents(this.selectedCell));
 
       // 关闭弹窗
       this.closeCellDetail();
-    },
-
-
-    saveCellEvents() {
-      if (!this.selectedCell) return;
-
-      // 过滤掉空事件
-      const validEvents = this.cellEvents.filter(event => event.content.trim() !== '');
-
-      // 保存到本地存储
-      const key = this.getCellStorageKey(this.selectedCell);
-      uni.setStorageSync(key, validEvents);
-
-      // 更新格子的事件标记
-      this.updateCellEventIndicator(this.selectedCell, validEvents.length > 0);
-    },
-
-    getCellStorageKey(cell) {
-      switch (cell.type) {
-        case 'year':
-          return `events_year_${cell.year}`;
-        case 'month':
-          return `events_month_${cell.year}_${cell.month}`;
-        case 'week':
-          return `events_week_${cell.year}_${cell.month}_${cell.week}`;
-        case 'day':
-          return `events_day_${cell.year}_${cell.month}_${cell.day}`;
-        default:
-          return '';
-      }
     },
 
     updateCellEventIndicator(cell, hasEvents) {
@@ -969,13 +880,6 @@ export default {
         }
       }
     },
-    handleEventClick(index, event) {
-      console.log('点击了事件', index, event);
-      // 如果有内容，则进入编辑状态
-      if (event.content) {
-        this.enableEventEditing(index);
-      }
-    },
 
     handleFullscreenClick(cell) {
       if (this.currentDimension === 'day') {
@@ -998,23 +902,9 @@ export default {
       }
       this.updateVisibleCells();
     },
-    deleteEvent(index) {
-      this.cellEvents.splice(index, 1);
-      // 删除事项后自动保存
-      this.saveCellEvents();
-    },
-
-    // 监听事项内容变化
-    onEventContentChange() {
-      // 自动保存事项
-      // this.saveCellEvents();
-    },
-
+    
     viewFullDetail() {
       if (!this.selectedCell) return;
-
-      // 保存当前事件
-      this.saveCellEvents();
 
       // 关闭弹窗
       this.$refs.cellDetailPopup.close();
