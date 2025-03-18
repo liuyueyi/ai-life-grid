@@ -4,18 +4,14 @@
       <view class="back-btn" @click="goBack">返回</view>
       <view class="title">{{ getPageTitle() }}</view>
     </view>
-    
+
     <view class="tabs">
-      <view 
-        v-for="(tab, index) in tabs" 
-        :key="index" 
-        :class="['tab', activeTab === tab.id ? 'active' : '']"
-        @click="changeTab(tab.id)"
-      >
+      <view v-for="(tab, index) in tabs" :key="index" :class="['tab', activeTab === tab.id ? 'active' : '']"
+        @click="changeTab(tab.id)">
         {{ tab.name }}
       </view>
     </view>
-    
+
     <view class="content">
       <!-- 关键事项 -->
       <view v-if="activeTab === 'events'" class="events-tab">
@@ -40,9 +36,14 @@
         </view>
         <button class="add-btn" @click="addNewEvent">添加新事项</button>
       </view>
-      
+
       <!-- 心情日志 -->
       <view v-if="activeTab === 'mood'" class="mood-tab">
+        <!-- 下面这个是画板 -->
+        <!-- <view class="huabi-content" style="width: 100%;">
+          <sp-board :tools="boardTools" saveAction="toAlbum" @completed="paintingCompleted"
+            width="80vw" height="80vh"></sp-board>
+        </view> -->
         <view class="mood-list">
           <view v-for="(log, index) in moodLogs" :key="index" class="mood-item">
             <view class="mood-header">
@@ -73,7 +74,7 @@
         </view>
         <button class="add-btn" @click="addNewMoodLog">添加心情日志</button>
       </view>
-      
+
       <!-- 收入支出台账 -->
       <view v-if="activeTab === 'finance'" class="finance-tab">
         <view class="finance-summary">
@@ -90,12 +91,12 @@
             <text class="summary-value">¥{{ getBalance() }}</text>
           </view>
         </view>
-        
+
         <view class="finance-chart">
           <!-- 这里可以使用图表组件，如 uCharts 或 F2 -->
           <view class="chart-placeholder">收支图表将在这里显示</view>
         </view>
-        
+
         <view class="finance-list">
           <view v-for="(record, index) in financeRecords" :key="index" class="finance-item">
             <view class="finance-header">
@@ -108,9 +109,8 @@
             <view class="finance-details">
               <view class="finance-category">
                 <text class="label">分类:</text>
-                <picker :range="record.type === 'income' ? incomeCategories : expenseCategories" 
-                        :value="getCategoryIndex(record)" 
-                        @change="updateCategory(index, $event)">
+                <picker :range="record.type === 'income' ? incomeCategories : expenseCategories"
+                  :value="getCategoryIndex(record)" @change="updateCategory(index, $event)">
                   <view class="picker-value">{{ record.category || '选择分类' }}</view>
                 </picker>
               </view>
@@ -128,7 +128,7 @@
         </view>
       </view>
     </view>
-    
+
     <!-- 标签选择器弹窗 -->
     <custom-popup ref="tagSelector" type="bottom">
       <view class="tag-selector">
@@ -137,9 +137,7 @@
           <text class="tag-selector-close" @click="closeTagSelector">×</text>
         </view>
         <view class="tag-list">
-          <view v-for="(tag, index) in availableTags" :key="index" 
-                class="tag-item" 
-                @click="selectTag(tag)">
+          <view v-for="(tag, index) in availableTags" :key="index" class="tag-item" @click="selectTag(tag)">
             {{ tag }}
           </view>
           <view class="add-tag-item">
@@ -149,7 +147,7 @@
         </view>
       </view>
     </custom-popup>
-    
+
     <!-- 录音弹窗 -->
     <custom-popup ref="voiceRecorder" type="center">
       <view class="voice-recorder">
@@ -159,7 +157,8 @@
         </view>
         <view class="recorder-content">
           <view class="recorder-timer">{{ recordingTime }}</view>
-          <view :class="['recorder-btn', isRecording ? 'recording' : '']" @touchstart="startRecording" @touchend="stopRecording">
+          <view :class="['recorder-btn', isRecording ? 'recording' : '']" @touchstart="startRecording"
+            @touchend="stopRecording">
             {{ isRecording ? '松开结束' : '按住录音' }}
           </view>
         </view>
@@ -178,30 +177,32 @@ export default {
       cellMonth: 0,
       cellDay: 1,
       cellWeek: 0,
-      
+
+      boardTools: ["pen", "eraser", "color", "text", "back", "clear", "upload", "save"],
+
       tabs: [
         { id: 'events', name: '关键事项' },
         { id: 'mood', name: '心情日志' },
         { id: 'finance', name: '收支台账' }
       ],
       activeTab: 'events',
-      
+
       // 关键事项数据
       events: [],
-      
+
       // 心情日志数据
       moodLogs: [],
-      
+
       // 收支台账数据
       financeRecords: [],
       incomeCategories: ['工资', '奖金', '投资收益', '礼金', '其他收入'],
       expenseCategories: ['餐饮', '交通', '购物', '娱乐', '居住', '医疗', '教育', '其他支出'],
-      
+
       // 标签选择器
       availableTags: ['重要', '紧急', '待办', '已完成', '收藏'],
       newTag: '',
       currentEventIndex: -1,
-      
+
       // 录音相关
       isRecording: false,
       recordingTime: '00:00',
@@ -215,17 +216,17 @@ export default {
     const app = getApp();
     this.themeMode = app.globalData.themeMode;
     this.particleEffect = app.globalData.particleEffect;
-    
+
     // 获取页面参数
     this.cellType = options.type || 'day';
     this.cellYear = parseInt(options.year) || new Date().getFullYear();
     this.cellMonth = parseInt(options.month) || new Date().getMonth();
     this.cellDay = parseInt(options.day) || new Date().getDate();
     this.cellWeek = parseInt(options.week) || 0;
-    
+
     // 加载数据
     this.loadData();
-    
+
     // 加载自定义设置
     const settings = uni.getStorageSync('lifeGridSettings');
     if (settings) {
@@ -233,14 +234,18 @@ export default {
     }
   },
   methods: {
+    paintingCompleted(filePath) {
+      console.log("filePath=" + filePath);
+    },
+
     goBack() {
       // 保存数据
       this.saveData();
-      
+
       // 返回上一页
       uni.navigateBack();
     },
-    
+
     getPageTitle() {
       const now = new Date();
       switch (this.cellType) {
@@ -256,60 +261,60 @@ export default {
           return '';
       }
     },
-    
+
     getWeekNumber() {
       const firstDay = new Date(this.cellYear, 0, 1);
       const targetDay = new Date(this.cellYear, this.cellMonth, this.cellDay);
-      
+
       // 计算这是一年中的第几周
       const dayOfYear = Math.floor((targetDay - firstDay) / (24 * 60 * 60 * 1000));
       return Math.ceil((dayOfYear + firstDay.getDay() + 1) / 7);
     },
-    
+
     changeTab(tabId) {
       // 切换前保存当前标签页数据
       this.saveData();
-      
+
       this.activeTab = tabId;
     },
-    
+
     // 数据加载和保存
     loadData() {
       // 根据格子类型和日期加载数据
       const storageKey = this.getStorageKey();
-      
+
       // 加载关键事项
       const eventsKey = `${storageKey}_events`;
       this.events = uni.getStorageSync(eventsKey) || [];
-      
+
       // 加载心情日志
       const moodKey = `${storageKey}_mood`;
       this.moodLogs = uni.getStorageSync(moodKey) || [];
-      
+
       // 加载收支台账
       const financeKey = `${storageKey}_finance`;
       this.financeRecords = uni.getStorageSync(financeKey) || [];
     },
-    
+
     saveData() {
       const storageKey = this.getStorageKey();
-      
+
       // 保存关键事项
       const eventsKey = `${storageKey}_events`;
       uni.setStorageSync(eventsKey, this.events);
-      
+
       // 保存心情日志
       const moodKey = `${storageKey}_mood`;
       uni.setStorageSync(moodKey, this.moodLogs);
-      
+
       // 保存收支台账
       const financeKey = `${storageKey}_finance`;
       uni.setStorageSync(financeKey, this.financeRecords);
-      
+
       // 更新主页格子的事件标记
       this.updateCellEventIndicator();
     },
-    
+
     getStorageKey() {
       switch (this.cellType) {
         case 'year':
@@ -324,11 +329,11 @@ export default {
           return '';
       }
     },
-    
+
     updateCellEventIndicator() {
       // 检查是否有任何数据
       const hasData = this.events.length > 0 || this.moodLogs.length > 0 || this.financeRecords.length > 0;
-      
+
       // 获取对应的格子存储键
       let cellKey = '';
       switch (this.cellType) {
@@ -345,22 +350,22 @@ export default {
           cellKey = `events_day_${this.cellYear}_${this.cellMonth}_${this.cellDay}`;
           break;
       }
-      
+
       // 更新格子事件标记
       if (cellKey) {
         const cellEvents = uni.getStorageSync(cellKey) || [];
-        
+
         // 如果有数据但没有事件标记，添加一个空事件以显示标记
         if (hasData && cellEvents.length === 0) {
           uni.setStorageSync(cellKey, [{ content: '有详细记录' }]);
-        } 
+        }
         // 如果没有数据但有事件标记，清除事件标记
         else if (!hasData && cellEvents.length > 0) {
           uni.setStorageSync(cellKey, []);
         }
       }
     },
-    
+
     // 关键事项相关方法
     addNewEvent() {
       this.events.push({
@@ -372,45 +377,45 @@ export default {
         createdAt: new Date()
       });
     },
-    
+
     toggleEventComplete(index) {
       if (index >= 0 && index < this.events.length) {
         this.events[index].completed = !this.events[index].completed;
       }
     },
-    
+
     deleteEvent(index) {
       if (index >= 0 && index < this.events.length) {
         this.events.splice(index, 1);
       }
     },
-    
+
     showTagSelector(index) {
       this.currentEventIndex = index;
       this.$refs.tagSelector.open();
     },
-    
+
     closeTagSelector() {
       this.$refs.tagSelector.close();
       this.currentEventIndex = -1;
       this.newTag = '';
     },
-    
+
     selectTag(tag) {
       if (this.currentEventIndex >= 0 && this.currentEventIndex < this.events.length) {
         const event = this.events[this.currentEventIndex];
-        
+
         // 检查标签是否已存在
         if (!event.tags) {
           event.tags = [];
         }
-        
+
         if (!event.tags.includes(tag)) {
           event.tags.push(tag);
         }
       }
     },
-    
+
     removeTag(eventIndex, tagIndex) {
       if (eventIndex >= 0 && eventIndex < this.events.length) {
         const event = this.events[eventIndex];
@@ -419,36 +424,36 @@ export default {
         }
       }
     },
-    
+
     addNewTag() {
       if (this.newTag.trim() === '') return;
-      
+
       // 添加到可用标签列表
       if (!this.availableTags.includes(this.newTag)) {
         this.availableTags.push(this.newTag);
-        
+
         // 保存可用标签
         uni.setStorageSync('availableTags', this.availableTags);
       }
-      
+
       // 添加到当前事项
       this.selectTag(this.newTag);
-      
+
       // 清空输入
       this.newTag = '';
     },
-    
+
     // 心情日志相关方法
     formatDate(date) {
       if (!date) return '';
-      
+
       if (typeof date === 'string') {
         date = new Date(date);
       }
-      
+
       return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
     },
-    
+
     addNewMoodLog() {
       this.moodLogs.push({
         id: Date.now(),
@@ -460,47 +465,47 @@ export default {
         voiceDuration: ''
       });
     },
-    
+
     updateMoodScore(index, score) {
       if (index >= 0 && index < this.moodLogs.length) {
         this.moodLogs[index].score = score;
       }
     },
-    
+
     deleteMoodLog(index) {
       if (index >= 0 && index < this.moodLogs.length) {
         this.moodLogs.splice(index, 1);
       }
     },
-    
+
     addImageToLog(index) {
       if (index < 0 || index >= this.moodLogs.length) return;
-      
+
       uni.chooseImage({
         count: 9,
         success: (res) => {
           const tempFilePaths = res.tempFilePaths;
-          
+
           // 确保images数组存在
           if (!this.moodLogs[index].images) {
             this.moodLogs[index].images = [];
           }
-          
+
           // 添加图片
           this.moodLogs[index].images = [...this.moodLogs[index].images, ...tempFilePaths];
         }
       });
     },
-    
+
     recordVoice(index) {
       this.currentMoodLogIndex = index;
       this.$refs.voiceRecorder.open();
     },
-    
+
     startRecording() {
       // 初始化录音管理器
       this.recorder = uni.getRecorderManager();
-      
+
       // 配置录音参数
       this.recorder.start({
         duration: 60000, // 最长录音时间，单位ms
@@ -509,7 +514,7 @@ export default {
         encodeBitRate: 192000,
         format: 'mp3'
       });
-      
+
       // 开始计时
       this.isRecording = true;
       let seconds = 0;
@@ -519,59 +524,59 @@ export default {
         const remainingSeconds = seconds % 60;
         this.recordingTime = `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
       }, 1000);
-      
+
       // 监听录音结束事件
       this.recorder.onStop((res) => {
         if (this.currentMoodLogIndex >= 0 && this.currentMoodLogIndex < this.moodLogs.length) {
           this.moodLogs[this.currentMoodLogIndex].voiceUrl = res.tempFilePath;
           this.moodLogs[this.currentMoodLogIndex].voiceDuration = this.recordingTime;
         }
-        
+
         // 关闭弹窗
         this.$refs.voiceRecorder.close();
-        
+
         // 重置状态
         this.isRecording = false;
         clearInterval(this.recordTimer);
         this.recordingTime = '00:00';
       });
     },
-    
+
     stopRecording() {
       if (this.recorder && this.isRecording) {
         this.recorder.stop();
       }
     },
-    
+
     cancelRecording() {
       if (this.recorder && this.isRecording) {
         this.recorder.stop();
       }
-      
+
       // 关闭弹窗
       this.$refs.voiceRecorder.close();
-      
+
       // 重置状态
       this.isRecording = false;
       clearInterval(this.recordTimer);
       this.recordingTime = '00:00';
     },
-    
+
     playVoice(voiceUrl) {
       if (!voiceUrl) return;
-      
+
       const innerAudioContext = uni.createInnerAudioContext();
       innerAudioContext.src = voiceUrl;
       innerAudioContext.play();
     },
-    
+
     deleteVoice(index) {
       if (index >= 0 && index < this.moodLogs.length) {
         this.moodLogs[index].voiceUrl = '';
         this.moodLogs[index].voiceDuration = '';
       }
     },
-    
+
     // 收支台账相关方法
     getTotalIncome() {
       return this.financeRecords
@@ -579,18 +584,18 @@ export default {
         .reduce((sum, record) => sum + parseFloat(record.amount || 0), 0)
         .toFixed(2);
     },
-    
+
     getTotalExpense() {
       return this.financeRecords
         .filter(record => record.type === 'expense')
         .reduce((sum, record) => sum + parseFloat(record.amount || 0), 0)
         .toFixed(2);
     },
-    
+
     getBalance() {
       return (parseFloat(this.getTotalIncome()) - parseFloat(this.getTotalExpense())).toFixed(2);
     },
-    
+
     addNewFinanceRecord(type) {
       this.financeRecords.push({
         id: Date.now(),
@@ -601,18 +606,18 @@ export default {
         description: ''
       });
     },
-    
+
     deleteFinanceRecord(index) {
       if (index >= 0 && index < this.financeRecords.length) {
         this.financeRecords.splice(index, 1);
       }
     },
-    
+
     getCategoryIndex(record) {
       const categories = record.type === 'income' ? this.incomeCategories : this.expenseCategories;
       return categories.indexOf(record.category);
     },
-    
+
     updateCategory(index, event) {
       if (index >= 0 && index < this.financeRecords.length) {
         const record = this.financeRecords[index];
@@ -627,4 +632,3 @@ export default {
 <style>
 @import './detail.css';
 </style>
-
