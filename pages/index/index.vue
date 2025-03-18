@@ -92,8 +92,8 @@
           </view>
           <view :class="['grid-container', `${currentDimension}-view`]">
             <view v-for="(cell, index) in visibleCells" :key="index"
-              :class="['grid-cell', getCellClasses(cell), currentDimension === 'day' ? 'calendar-cell' : '']"
-              @click="openCellDetail(cell)">
+              :class="['grid-cell', getCellClasses(cell), currentDimension === 'day' ? 'calendar-cell' : '', cell === selectedCell ? 'selected-cell' : '']"
+              @click="handleCellClick(cell)">
               <view class="cell-content">
                 <text class="cell-label" v-html="getCellLabel(cell)">
                 </text>
@@ -110,16 +110,13 @@
         </view>
       </scroll-view>
 
-      <!-- <view class="navigation-controls">
-        <button class="nav-btn" @click="navigatePrevious">上一{{ getNavigationUnit() }}</button>
-        <button class="nav-btn" @click="navigateToday">今天</button>
-        <button class="nav-btn" @click="navigateNext">下一{{ getNavigationUnit() }}</button>
+      <!-- 浮动按钮 -->
+      <view class="floating-today-btn" @click="navigateToToday()">
+        <text>今</text>
       </view>
-       -->
-      <!-- <view class="bottom-controls">
-        <button class="settings-btn" @click="openSettings">设置</button>
-        <button class="share-btn" @click="shareLifeGrid">分享</button>
-      </view> -->
+      <view class="floating-add-btn" @click="openCellDetail()" v-if="this.selectedCell">
+        <text>+</text>
+      </view>
     </view>
 
     <!-- 格子详情弹窗 -->
@@ -159,6 +156,7 @@ export default {
   },
   data() {
     return {
+      selectedCell: null,
       initialized: false,
       birthDate: '',
       schoolStartDate: '',
@@ -224,6 +222,28 @@ export default {
       this.initialized = true;
       this.generateLifeGrid();
       this.updateVisibleCells();
+
+      // 初始化 selectedCell 为当天对应的格子
+      const now = new Date();
+      const currentCell = this.lifeGridData.find(cell => {
+        if (this.currentDimension === 'day') {
+          return cell.type === 'day' &&
+            cell.year === now.getFullYear() &&
+            cell.month === now.getMonth() &&
+            cell.day === now.getDate();
+        } else if (this.currentDimension === 'month') {
+          return cell.type === 'month' &&
+            cell.year === now.getFullYear() &&
+            cell.month === now.getMonth();
+        } else {
+          return cell.type === 'year' &&
+            cell.year === now.getFullYear();
+        }
+      });
+
+      if (!this.selectedCell) {
+        this.handleCellClick(currentCell)
+      }
     }
 
     // 加载自定义设置
@@ -243,6 +263,29 @@ export default {
     }
   },
   methods: {
+    handleCellClick(cell) {
+      if (this.selectedCell === cell) {
+        // 双击了格子，准备进入详情页吧
+        if (cell.type === 'year') {
+          // 年视图点击进入对应月视图
+          this.currentDimension = 'month';
+          this.currentYear = cell.year;
+          this.updateVisibleCells();
+        } else if (cell.type === 'month') {
+          // 月视图点击进入对应日视图
+          this.currentDimension = 'day';
+          this.currentYear = cell.year;
+          this.currentMonth = cell.month;
+          this.updateVisibleCells();
+        } else if (cell.type === 'day') {
+          // 日视图点击之后进入详情页
+          this.handleFullscreenClick(cell);
+        }
+      } else {
+        // 切换选中的格子
+        this.selectedCell = cell;
+      }
+    },
     getRandomParticleStyle() {
       const size = Math.floor(Math.random() * 20) + 10; // 10-30px
       const left = Math.floor(Math.random() * 100); // 0-100%
@@ -430,8 +473,13 @@ export default {
         }
       }
 
-      // 加载保存的事件数据
-      this.loadEvents();
+
+      // 加载保存的事件数据并更新格子的事件指示器
+      this.lifeGridData.forEach(cell => {
+        const key = this.getCellStorageKey(cell);
+        const events = uni.getStorageSync(key) || [];
+        cell.hasEvents = events.length > 0;
+      });
     },
 
     getWeeksInMonth(year, month) {
@@ -470,6 +518,13 @@ export default {
           // 显示所有年份，并添加时期标记
           this.visibleCells = this.lifeGridData.filter(cell => cell.type === 'year');
 
+          // 更新可见格子的事件指示器
+          this.visibleCells.forEach(cell => {
+            const key = this.getCellStorageKey(cell);
+            const events = uni.getStorageSync(key) || [];
+            cell.hasEvents = events.length > 0;
+          });
+
           // 为每个时期的第一个格子添加标记
           const stages = [
             { name: '童年', start: this.birthDate },
@@ -493,6 +548,13 @@ export default {
           this.visibleCells = this.lifeGridData.filter(
             cell => cell.type === 'month' && cell.year === this.currentYear
           );
+
+          // 更新可见格子的事件指示器
+          this.visibleCells.forEach(cell => {
+            const key = this.getCellStorageKey(cell);
+            const events = uni.getStorageSync(key) || [];
+            cell.hasEvents = events.length > 0;
+          });
           break;
 
         case 'day':
@@ -539,7 +601,7 @@ export default {
               timeStatus = 'present';
             }
 
-            this.visibleCells.push({
+            const cell = {
               type: 'day',
               year: this.currentYear,
               month: this.currentMonth,
@@ -547,7 +609,19 @@ export default {
               stage: this.getStageForDate(cellDate),
               timeStatus,
               hasEvents: false
-            });
+            };
+
+            if (timeStatus === 'present' && !this.selectedCell) {
+              // 如果当前格子是今天，将其作为选中的格子
+              this.selectedCell = cell;
+            }
+
+            // 获取并更新事件指示器
+            const key = this.getCellStorageKey(cell);
+            const events = uni.getStorageSync(key) || [];
+            cell.hasEvents = events.length > 0;
+
+            this.visibleCells.push(cell);
           }
 
           // 添加下个月的天数以填充网格
@@ -654,6 +728,7 @@ export default {
       }
     },
     showPopupTitle(cell) {
+      console.log('显示标题', cell);
       switch (this.currentDimension) {
         case 'year':
           return `${cell.year}年`;
@@ -741,6 +816,20 @@ export default {
       }
     },
 
+    navigateToToday() {
+      // 切换到日视图
+      this.currentDimension = 'day';
+
+      // 设置为当前年月
+      const now = new Date();
+      this.selectedCell = null;
+      this.currentYear = now.getFullYear();
+      this.currentMonth = now.getMonth();
+
+      // 更新视图并滚动到当前日期
+      this.updateVisibleCells();
+    },
+
     toggleDimension() {
       if (this.currentDimension === 'day') {
         this.currentDimension = 'month';
@@ -774,7 +863,7 @@ export default {
       switch (this.currentDimension) {
         case 'year':
           // 年视图，不支持左右切换
-          
+
           break;
         case 'month':
           // 后移一年
@@ -850,29 +939,13 @@ export default {
     },
 
     // 格子详情相关方法
-    openCellDetail(cell) {
-      // if (cell.type === 'year') {
-      //   // 年视图点击进入对应月视图
-      //   this.currentDimension = 'month';
-      //   this.currentYear = cell.year;
-      //   this.updateVisibleCells();
-      // } else if (cell.type === 'month') {
-      //   // 月视图点击进入对应日视图
-      //   this.currentDimension = 'day';
-      //   this.currentYear = cell.year;
-      //   this.currentMonth = cell.month;
-      //   this.updateVisibleCells();
-      // } else if (cell.type === 'day') {
-      //   // 日视图点击打开详情弹窗
-      //   this.selectedCell = cell;
-      //   this.loadCellEvents(cell);
-      //   if (this.$refs.cellDetailPopup) {
-      //     this.$refs.cellDetailPopup.open();
-      //   }
-      // }
-      // 日视图点击打开详情弹窗
-      this.selectedCell = cell;
-      this.loadCellEvents(cell);
+    openCellDetail() {
+      if (!this.selectedCell) {
+        // 没有选中的cell
+        console.log('请选择一个cell');
+        return;
+      }
+      this.loadCellEvents(this.selectedCell);
       if (this.$refs.cellDetailPopup) {
         this.$refs.cellDetailPopup.open();
       }
@@ -882,7 +955,6 @@ export default {
       // 关闭弹窗
       if (this.$refs.cellDetailPopup) {
         this.$refs.cellDetailPopup.close();
-        this.selectedCell = null;
         this.cellEvents = [];
       }
     },
@@ -1146,5 +1218,47 @@ export default {
   /* 设置宽度为格子的90% */
   transform: none;
   /* 移除之前的transform */
+}
+
+.floating-add-btn {
+  position: fixed;
+  right: 40rpx;
+  bottom: 40rpx;
+  width: 100rpx;
+  height: 100rpx;
+  background: linear-gradient(135deg, #ec4899, #8b5cf6);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4rpx 10rpx rgba(0, 0, 0, 0.2);
+  z-index: 100;
+}
+
+.floating-add-btn text {
+  color: #fff;
+  font-size: 60rpx;
+  font-weight: 300;
+}
+
+.floating-today-btn {
+  position: fixed;
+  right: 160rpx;
+  bottom: 40rpx;
+  width: 100rpx;
+  height: 100rpx;
+  background: linear-gradient(135deg, #ec4899, #8b5cf6);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4rpx 10rpx rgba(0, 0, 0, 0.2);
+  z-index: 100;
+}
+
+.floating-today-btn text {
+  color: #fff;
+  font-size: 40rpx;
+  font-weight: 500;
 }
 </style>

@@ -192,6 +192,39 @@
   }
   
   .grid-cell {
+  transition: all 0.3s ease;
+}
+
+.selected-cell {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(142, 68, 173, 0.3);
+  border: 2px solid #8e44ad;
+}
+
+.floating-add-btn {
+  position: fixed;
+  right: 30px;
+  bottom: 30px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #9b59b6, #8e44ad);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 32px;
+  box-shadow: 0 4px 12px rgba(142, 68, 173, 0.3);
+  transition: all 0.3s ease;
+  z-index: 999;
+}
+
+.floating-add-btn:active {
+  transform: scale(0.95);
+  box-shadow: 0 2px 8px rgba(142, 68, 173, 0.2);
+}
+
+.grid-cell {
     border-radius: 10px;
     display: flex;
     align-items: center;
@@ -242,8 +275,8 @@
     filter: none;
     opacity: 1;
     box-shadow: 0 0 15px rgba(142, 68, 173, 0.3);
-    border: 2px solid #8e44ad;
-    transform: scale(1.02);
+    /* border: 2px solid #8e44ad; */
+    /* transform: scale(1.02); */
     z-index: 1;
   }
   
@@ -395,44 +428,6 @@
     color: white;
     border-radius: 9px;
     padding: 0 4px;
-  }
-  
-  .navigation-controls {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 15px;
-    padding: 10px;
-    background-color: rgba(255, 255, 255, 0.8);
-    border-radius: 10px;
-  }
-  
-  .nav-btn {
-    flex: 1;
-    margin: 0 5px;
-    height: 40px;
-    line-height: 40px;
-    background-color: #8e44ad;
-    color: white;
-    border-radius: 8px;
-    font-size: 14px;
-  }
-  
-  .bottom-controls {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 15px;
-    padding: 10px;
-  }
-  
-  .settings-btn,
-  .share-btn {
-    width: 48%;
-    height: 45px;
-    line-height: 45px;
-    background-color: rgba(255, 255, 255, 0.8);
-    color: #333;
-    border-radius: 8px;
-    font-size: 16px;
   }
   
   /* 弹窗样式 */
