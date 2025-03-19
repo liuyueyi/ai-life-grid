@@ -71,6 +71,15 @@ export class TaskUtils {
     }
 
     // 标签管理
+    static initDefaultTags() {
+        const defaultTags = ['紧急', '提醒', '日常', '备注'];
+        const existingTags = this.getAvailableTags();
+        if (existingTags.length === 0) {
+            this.saveAvailableTags(defaultTags);
+        }
+        return this.getAvailableTags();
+    }
+
     static getAvailableTags() {
         return uni.getStorageSync('availableTags') || [];
     }
