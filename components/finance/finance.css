@@ -390,3 +390,48 @@
 .empty-desc text {
     line-height: 1.5;
 }
+
+
+.category-chart {
+    margin-top: 20rpx;
+    display: flex;
+    padding: 20rpx;
+    background-color: #fff;
+    border-radius: 12rpx;
+}
+
+.pie-chart {
+    width: 120px;
+    height: 120px;
+    flex-shrink: 0;
+}
+
+.chart-legend {
+    flex: 1;
+    margin-left: 20rpx;
+    display: flex;
+    flex-direction: column;
+    gap: 10rpx;
+    font-size: 24rpx;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10rpx;
+}
+
+.legend-dot {
+    width: 16rpx;
+    height: 16rpx;
+    border-radius: 50%;
+}
+
+.legend-label {
+    flex: 1;
+    color: #666;
+}
+
+.legend-value {
+    color: #999;
+}

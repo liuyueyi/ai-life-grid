@@ -13,12 +13,40 @@
             </view>
             <view class="assets-details">
                 <view class="detail-item">
-                    <text class="detail-label">总收入</text>
+                    <view class="detail-label" @tap="categoryShow = 'expense'">总收入
+                        <svg style="width: 1.2em;height: 1.2em;vertical-align: middle;fill: currentColor;overflow: hidden;"
+                            viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1536">
+                            <path
+                                d="M675.328 117.717333A425.429333 425.429333 0 0 0 512 85.333333C276.352 85.333333 85.333333 276.352 85.333333 512s191.018667 426.666667 426.666667 426.666667 426.666667-191.018667 426.666667-426.666667c0-56.746667-11.093333-112-32.384-163.328a21.333333 21.333333 0 0 0-39.402667 16.341333A382.762667 382.762667 0 0 1 896 512c0 212.074667-171.925333 384-384 384S128 724.074667 128 512 299.925333 128 512 128c51.114667 0 100.8 9.984 146.986667 29.12a21.333333 21.333333 0 0 0 16.341333-39.402667zM490.666667 448.149333c0-11.861333 9.472-21.482667 21.333333-21.482666 11.776 0 21.333333 9.6 21.333333 21.482666v255.701334C533.333333 715.733333 523.861333 725.333333 512 725.333333c-11.776 0-21.333333-9.6-21.333333-21.482666V448.149333z m0-127.957333a21.333333 21.333333 0 1 1 42.666666 0v42.282667a21.333333 21.333333 0 1 1-42.666666 0v-42.282667z">
+                            </path>
+                        </svg>
+                    </view>
                     <text class="detail-value income">{{ getTotalIncome() }}</text>
                 </view>
-                <view class="detail-item">
-                    <text class="detail-label">总支出</text>
+                <view class="detail-item" @tap="categoryShow = 'income'">
+                    <view class="detail-label">总支出
+                        <svg style="width: 1.2em;height: 1.2em;vertical-align: middle;fill: currentColor;overflow: hidden;"
+                            viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1536">
+                            <path
+                                d="M675.328 117.717333A425.429333 425.429333 0 0 0 512 85.333333C276.352 85.333333 85.333333 276.352 85.333333 512s191.018667 426.666667 426.666667 426.666667 426.666667-191.018667 426.666667-426.666667c0-56.746667-11.093333-112-32.384-163.328a21.333333 21.333333 0 0 0-39.402667 16.341333A382.762667 382.762667 0 0 1 896 512c0 212.074667-171.925333 384-384 384S128 724.074667 128 512 299.925333 128 512 128c51.114667 0 100.8 9.984 146.986667 29.12a21.333333 21.333333 0 0 0 16.341333-39.402667zM490.666667 448.149333c0-11.861333 9.472-21.482667 21.333333-21.482666 11.776 0 21.333333 9.6 21.333333 21.482666v255.701334C533.333333 715.733333 523.861333 725.333333 512 725.333333c-11.776 0-21.333333-9.6-21.333333-21.482666V448.149333z m0-127.957333a21.333333 21.333333 0 1 1 42.666666 0v42.282667a21.333333 21.333333 0 1 1-42.666666 0v-42.282667z">
+                            </path>
+                        </svg>
+                    </view>
                     <text class="detail-value expense">{{ getTotalExpense() }}</text>
+                </view>
+            </view>
+        </view>
+        <!-- 添加支出分类统计图 -->
+        <view>
+            <view class="category-chart" v-if="financeRecords.length > 0">
+                <canvas canvas-id="categoryPieChart" class="pie-chart" @touchstart="touchChart"></canvas>
+                <view class="chart-legend">
+                    <text>{{ this.categoryShow == 'expense' ? '支出分布:' : '收入分布:' }}</text>
+                    <view v-for="(item, index) in categoryStats" :key="index" class="legend-item">
+                        <text class="legend-dot" :style="{ backgroundColor: item.color }"></text>
+                        <text class="legend-label">{{ item.category }}</text>
+                        <text class="legend-value">{{ item.percentage }}%</text>
+                    </view>
                 </view>
             </view>
         </view>
@@ -125,6 +153,28 @@ export default {
             required: true
         }
     },
+    watch: {
+        financeRecords: {
+            handler() {
+                this.$nextTick(() => {
+                    if (this.financeRecords.length > 0) {
+                        this.drawPieChart();
+                    }
+                });
+            },
+            deep: true
+        },
+        categoryShow: {
+            immediate: true,
+            handler() {
+                this.$nextTick(() => {
+                    if (this.financeRecords.length > 0) {
+                        this.drawPieChart();
+                    }
+                });
+            },
+        }
+    },
     data() {
         return {
             isRecorderVisible: false,
@@ -142,6 +192,8 @@ export default {
             calcProcess: '',
             calRes: false,
             editingRecordId: null,
+            categoryStats: [],
+            categoryShow: 'expense',
         };
     },
     computed: {
@@ -170,6 +222,69 @@ export default {
             const financeKey = `${this.storageKey}_finance`;
             uni.setStorageSync(financeKey, this.financeRecords);
             this.$emit('save', this.financeRecords);
+        },
+        getCategoryStats() {
+            const stats = {};
+            const totalExpense = parseFloat(this.getTotalAmountByType());
+
+            // 统计各类别支出
+            this.financeRecords
+                .filter(record => record.type === this.categoryShow)
+                .forEach(record => {
+                    if (!stats[record.category]) {
+                        stats[record.category] = 0;
+                    }
+                    stats[record.category] += parseFloat(record.amount);
+                });
+
+            // 计算百分比并添加颜色
+            const colors = [
+                '#91cc75', '#fac858', '#ee6666', '#73c0de', '#3ba272', '#fc8452', '#9a60b4', '#ea7ccc',
+                '#5470c6', '#ffbab0', '#6e7074', '#61a0a8', '#d48265', '#c23531', '#2f4554', '#749f83',
+                '#ca8622', '#bda29a', '#6e5768', '#44525c', '#726930', '#a3b899', '#d87c7c', '#919e8b',
+                '#7b6651', '#dd6b66', '#759aa0', '#e69d87', '#8dc1a9', '#ea7e53', '#73a373', '#bc8f8f',
+                '#a48f7b', '#b381c2', '#93b5cf', '#d7b8a2', '#a89bb9', '#9c9c9c', '#7f7f7f'
+            ];
+            return Object.entries(stats).map(([category, amount], index) => ({
+                category,
+                amount,
+                percentage: this.formatNumber(((amount / totalExpense) * 100).toFixed(2)),
+                color: colors[index % colors.length]
+            })).sort((a, b) => b.amount - a.amount);
+        },
+
+        drawPieChart() {
+            const ctx = uni.createCanvasContext('categoryPieChart', this);
+            this.categoryStats = this.getCategoryStats();
+            const centerX = 60;
+            const centerY = 60;
+            const radius = 50;
+
+            let startAngle = -Math.PI / 2;
+            this.categoryStats.forEach(item => {
+                const percentage = parseFloat(item.percentage);
+                const endAngle = startAngle + (percentage / 100) * Math.PI * 2;
+
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+                ctx.setFillStyle(item.color);
+                ctx.fill();
+
+                startAngle = endAngle;
+            });
+
+            // 绘制中心空白
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius * 0.6, 0, Math.PI * 2);
+            ctx.setFillStyle('#ffffff');
+            ctx.fill();
+
+            ctx.draw();
+        },
+
+        touchChart() {
+            // 可以在这里添加图表交互逻辑
         },
         showDeleteConfirm(record) {
             uni.showModal({
@@ -398,6 +513,13 @@ export default {
                 .filter(record => record.type === 'expense')
                 .reduce((sum, record) => sum + parseFloat(record.amount || 0), 0)
                 .toFixed(2);
+        },
+        getTotalAmountByType() {
+            if (this.categoryShow === 'expense') {
+                return this.getTotalExpense();
+            } else {
+                return this.getTotalIncome();
+            }
         },
         getBalance() {
             return (parseFloat(this.getTotalIncome()) - parseFloat(this.getTotalExpense())).toFixed(2);
