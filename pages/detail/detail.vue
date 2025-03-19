@@ -1,7 +1,7 @@
 <template>
   <view class="container" :style="{ backgroundImage: `url(${backgroundImage})` }">
     <view class="header">
-      <view class="back-btn" @click="goBack">首页</view>
+      <view class="back-btn" @click="goBack">返回</view>
       <view class="title">{{ getPageTitle() }}</view>
     </view>
 
@@ -15,8 +15,7 @@
     <view class="content">
       <!-- 关键事项 -->
       <view v-if="activeTab === 'events'" class="events-tab">
-        <event-manager :cell="{ type: cellType, year: cellYear, month: cellMonth, day: cellDay }" source="detail"
-          @save="handleEventSave" @cancel="handleEventCancel" />
+        <event-manager :cell="cell" source="detail" @save="handleEventSave" @cancel="handleEventCancel" />
       </view>
 
       <!-- 心情日志 -->
@@ -58,7 +57,7 @@
 
       <!-- 收入支出台账 -->
       <view v-if="activeTab === 'finance'" class="finance-tab">
-        <finance :storage-key="getStorageKey()" @save="handleFinanceSave" />
+        <finance :storage-key="getStorageKey()" @save="handleFinanceSave" :cell="cell" />
       </view>
     </view>
 
@@ -184,10 +183,17 @@ export default {
       this.saveData();
 
       // 返回上一页
-      // 返回主页
-      uni.reLaunch({
-        url: '/pages/index/index',
-      });
+      const pages = getCurrentPages();
+      if (pages.length > 1) {
+        uni.navigateBack({
+          delta: 1
+        });
+      } else {
+        // 如果没有上一页，则返回首页
+        uni.reLaunch({
+          url: '/pages/index/index'
+        });
+      }
     },
 
     getPageTitle() {

@@ -2,57 +2,107 @@
     <view class="event-manager">
         <view class="key-events-section">
             <text class="section-title" v-if="source == 'index'">记录生活中的一点一滴</text>
-            <view v-for="(event, index) in events" :key="index" class="event-item">
-                <view class="event-dot"></view>
-                <view class="event-content">
-                    <view class="content-wrapper">
-                        <view v-if="events[index].show" @tap="toEditContent(events[index])">{{ events[index].content }}
+            <view :class="cell.type != 'day' ? 'record-pannel' : ''">
+                <view class="record-header" v-if="cell.type == 'year'">
+                    <text class="record-title">{{ cell.year }}年度记录</text>
+                    <text class="record-subtitle">Annual Records</text>
+                </view>
+                <view class="record-header" v-if="cell.type == 'month'">
+                    <text class="record-title">{{ cell.year }}年{{ cell.month + 1 }}月记录</text>
+                    <text class="record-subtitle">Monthly Records</text>
+                </view>
+                <view v-for="(event, index) in events" :key="index" class="event-item">
+                    <view class="event-dot"></view>
+                    <view class="event-content">
+                        <view class="content-wrapper">
+                            <view v-if="event.show" @tap="toEditContent(event)">{{ event.content }}
+                            </view>
+                            <textarea v-else v-model="event.content" :id="'area' + index" :ref="'textarea' + index"
+                                placeholder="记录点滴事件..." @input="onEventContentChange" @blur="onBlur(index)" />
                         </view>
-                        <textarea v-else v-model="events[index].content" :id="'area' + index" :ref="'textarea' + index"
-                            placeholder="记录点滴事件..." @input="onEventContentChange" @blur="onBlur(index)" />
-                    </view>
-                    <view class="event-meta">
-                        <view class="event-time">
-                            <picker mode="time" :value="events[index].time || currentTime" start="00:00" end="23:59"
-                                @change="onTimeChange($event, index)">
-                                <text>{{ events[index].time || currentTime }}</text>
-                            </picker>
-                        </view>
-                        <view class="event-tags">
-                            <text v-for="(tag, tagIndex) in event.tags" :key="tagIndex" :class="['tag', {
+                        <view class="event-meta">
+                            <view class="event-time">
+                                <picker mode="time" :value="event.time || currentTime" start="00:00" end="23:59"
+                                    @change="onTimeChange($event, index)">
+                                    <text>{{ event.time || currentTime }}</text>
+                                </picker>
+                            </view>
+                            <view class="event-tags">
+                                <text v-for="(tag, tagIndex) in event.tags" :key="tagIndex" :class="['tag', {
                 'tag-urgent': tag === '紧急',
                 'tag-reminder': tag === '提醒',
                 'tag-daily': tag === '日常',
                 'tag-note': tag === '备注',
                 'tag-default': !['紧急', '提醒', '日常', '备注'].includes(tag)
             }]">
-                                {{ tag }}
-                                <text class="tag-delete" @click.stop="removeTag(index, tagIndex)">×</text>
-                            </text>
-                            <view class="tag-selector">
-                                <view class="tag-selector-trigger" @click="showTagSelector(index)">
-                                    <text class="add-tag-icon">+</text>
-                                </view>
-                                <view class="tag-selector-dropdown" v-if="events[index].showTagSelector">
-                                    <view class="tag-list">
-                                        <view v-for="(tag, tagIndex) in availableTags" :key="tagIndex" class="tag-item"
-                                            @click="toggleTag(index, tag)">
-                                            <text class="tag-item-text"
-                                                :class="{ 'selected': events[index].tags.includes(tag) }">{{ tag
-                                                }}</text>
-                                        </view>
+                                    {{ tag }}
+                                    <text class="tag-delete" @click.stop="removeTag(index, tagIndex)">×</text>
+                                </text>
+                                <view class="tag-selector">
+                                    <view class="tag-selector-trigger" @click="showTagSelector(index)">
+                                        <text class="add-tag-icon">+</text>
                                     </view>
-                                    <view class="tag-manage">
-                                        <input type="text" v-model="newTag" placeholder="添加新标签" class="new-tag-input" />
-                                        <button class="add-tag-btn" @click="addNewTag">添加</button>
+                                    <view class="tag-selector-dropdown" v-if="event.showTagSelector">
+                                        <view class="tag-list">
+                                            <view v-for="(tag, tagIndex) in availableTags" :key="tagIndex"
+                                                class="tag-item" @click="toggleTag(index, tag)">
+                                                <text class="tag-item-text"
+                                                    :class="{ 'selected': event.tags.includes(tag) }">{{ tag
+                                                    }}</text>
+                                            </view>
+                                        </view>
+                                        <view class="tag-manage">
+                                            <input type="text" v-model="newTag" placeholder="添加新标签"
+                                                class="new-tag-input" />
+                                            <button class="add-tag-btn" @click="addNewTag">添加</button>
+                                        </view>
                                     </view>
                                 </view>
                             </view>
                         </view>
                     </view>
+
+                    <text class="delete-event" @click="deleteEvent(index)">×</text>
+                </view>
+            </view>
+
+            <view class="record-pannel" v-if="subLevelEvents.length > 0">
+                <view class="record-header" v-if="cell.type == 'year'">
+                    <text class="record-title">{{ cell.year }}年月记录明细</text>
+                    <text class="record-subtitle">Monthly Records</text>
+                </view>
+                <view class="record-header" v-if="cell.type == 'month'">
+                    <text class="record-title">{{ cell.month + 1 }}月日记录明细</text>
+                    <text class="record-subtitle">Daily Records</text>
                 </view>
 
-                <text class="delete-event" @click="deleteEvent(index)">×</text>
+                <view v-for="(event, index) in subLevelEvents" :key="index" class="event-item"
+                    v-if="subLevelEvents.length > 0">
+                    <view class="event-dot"></view>
+                    <view class="event-content">
+                        <view class="content-wrapper">
+                            <view @tap="navToDetail(event)">{{ event.content }}
+                            </view>
+                        </view>
+                        <view class="event-meta">
+                            <view class="event-time">
+                                <text>{{ event.day }} </text>
+                            </view>
+                            <view class="event-tags">
+                                <text v-for="(tag, tagIndex) in event.tags" :key="tagIndex" :class="['tag', {
+                'tag-urgent': tag === '紧急',
+                'tag-reminder': tag === '提醒',
+                'tag-daily': tag === '日常',
+                'tag-note': tag === '备注',
+                'tag-default': !['紧急', '提醒', '日常', '备注'].includes(tag)
+            }]">
+                                    {{ tag }}
+                                </text>
+                            </view>
+                        </view>
+                    </view>
+                    <text class="delete-event" @click="deleteSubEvent(index)">×</text>
+                </view>
             </view>
             <button class="add-event-btn" @click="addNewEvent" v-if="source == 'index'">+</button>
         </view>
@@ -64,6 +114,7 @@
 
 <script>
 import { TaskUtils } from '../../utils/TaskUtils.js';
+import { DateUtil } from '../../utils/DateUtil.js';
 
 export default {
     name: 'EventManager',
@@ -80,6 +131,7 @@ export default {
     data() {
         return {
             events: [],
+            subLevelEvents: [], // 月维度详情时,这里显示日维度的记录列表; 年维度详情时,这里展示月维度的记录列表
             currentTime: '',
             availableTags: [],
             newTag: '',
@@ -91,7 +143,7 @@ export default {
         cell: {
             immediate: true,
             handler(newEvents) {
-                console.log('cell发生了变更 = ', newEvents);
+                console.log('cell发生了变更 = ', this.cell, newEvents);
                 this.events = TaskUtils.getEvents(this.cell);
                 for (let e of this.events) {
                     e.show = true;
@@ -99,6 +151,7 @@ export default {
                 if (this.events.length < 1) {
                     this.addNewEvent();
                 }
+                this.loadDetailEvents();
             }
         },
     },
@@ -109,6 +162,11 @@ export default {
     },
 
     methods: {
+        navToDetail(event) {
+            uni.navigateTo({
+                url: '/pages/detail/detail?date=' + event.day
+            });
+        },
         updateCurrentTime() {
             const now = new Date();
             const hours = String(now.getHours()).padStart(2, '0');
@@ -119,8 +177,57 @@ export default {
             this.$set(this.events[index], 'show', true);
             this.save();
         },
+        loadDetailEvents() {
+            if (this.source == 'index') {
+                return;
+            }
+
+            // 如果是月\年进入的详情,则展示完月/年的记录之后,再将每天的计划明细展示出来
+            if (this.cell.type == 'month') {
+                // 展示日事件
+                const days = DateUtil.getDays(this.cell.year, this.cell.month);
+                let subLevelEvents = []
+
+                for (let m = days; m > 0; m--) {
+                    let tmpCell = { type: 'day', year: this.cell.year, month: this.cell.month, 'day': m }
+                    let sub = TaskUtils.getEvents(tmpCell);
+                    if (sub && sub.length > 0) {
+                        for (let c of sub) {
+                            c.day = `${this.cell.year}-${this.cell.month + 1}-${m}`
+                            c.cell = tmpCell;
+                        }
+                        subLevelEvents = subLevelEvents.concat(sub);
+                    }
+                }
+                for (let e of subLevelEvents) {
+                    e.show = true;
+                }
+                this.subLevelEvents = subLevelEvents;
+            } else if (this.cell.type == 'year') {
+                // 展示月事件
+                let subLevelEvents = []
+                for (let m = 11; m >= 0; m--) {
+                    let tmpCell = { type: 'month', year: this.cell.year, 'month': m };
+                    let sub = TaskUtils.getEvents(tmpCell);
+                    if (sub && sub.length > 0) {
+                        for (let c of sub) {
+                            c.day = `${this.cell.year}-${m + 1}`
+                            c.cell = tmpCell;
+                        }
+                        subLevelEvents = subLevelEvents.concat(sub);
+                    }
+                }
+                for (let e of subLevelEvents) {
+                    e.show = true;
+                }
+                this.subLevelEvents = subLevelEvents;
+            }
+
+            console.log('子记录明细:', this.subLevelEvents);
+        },
         addNewEvent() {
             const newEvent = {
+                id: Date.now(),
                 content: '',
                 tags: [],
                 time: this.currentTime,
@@ -129,13 +236,22 @@ export default {
                 isNew: true,
                 expanded: false
             };
-            // const createdEvent = TaskUtils.createEvent(this.cell, newEvent);
             this.events.push(newEvent);
         },
         deleteEvent(index) {
             const event = this.events[index];
+            console.log('准备删除时间', event)
             if (TaskUtils.deleteEvent(this.cell, event.id)) {
+                console.log('删除成功')
                 this.events.splice(index, 1);
+            } else {
+                console.log('删除失败')
+            }
+        },
+        deleteSubEvent(index) {
+            const event = this.subLevelEvents[index];
+            if (TaskUtils.deleteEvent(event.cell, event.id)) {
+                this.subLevelEvents.splice(index, 1);
             }
         },
         toEditContent(e) {
@@ -217,10 +333,10 @@ export default {
                 return true;
             });
 
-            console.log('保存的内容是：', this.cell, this.events);
             const validEvents = this.events
                 .map(({ isEditing, isNew, ...event }) => {
                     isNew = event.id ? false : true;
+                    console.log('   ')
                     if (isNew) {
                         return TaskUtils.createEvent(this.cell, event);
                     } else {
@@ -546,5 +662,33 @@ export default {
     color: white;
     font-size: 24px;
     font-weight: bold;
+}
+
+.record-pannel {
+    margin: 20rpx 0 30rpx;
+    padding: 20rpx;
+    background: #fff;
+    border-radius: 12rpx;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.record-header {
+
+    text-align: center;
+}
+
+.record-title {
+    font-size: 32rpx;
+    font-weight: 600;
+    color: #333;
+    display: block;
+    margin-bottom: 8rpx;
+}
+
+.record-subtitle {
+    font-size: 24rpx;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 </style>

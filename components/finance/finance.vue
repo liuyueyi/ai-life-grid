@@ -148,10 +148,14 @@
 export default {
     name: 'Finance',
     props: {
+        cell: {
+            type: Object,
+            default: () => { }
+        },
         storageKey: {
             type: String,
             required: true
-        }
+        },
     },
     watch: {
         financeRecords: {

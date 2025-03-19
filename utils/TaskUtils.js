@@ -50,8 +50,13 @@ export class TaskUtils {
             events[index] = updatedEvent;
             this.saveEvents(params, events);
             return updatedEvent;
+        } else {
+            // 没找到，则走save逻辑
+            console.error(`Event with ID ${eventId} not found.`);
+            events.push(eventData);
+            this.saveEvents(params, events);
+            return eventData;
         }
-        return null;
     }
 
     // 删除事件
