@@ -129,8 +129,8 @@ export default {
                 isNew: true,
                 expanded: false
             };
-            const createdEvent = TaskUtils.createEvent(this.cell, newEvent);
-            this.events.push(createdEvent);
+            // const createdEvent = TaskUtils.createEvent(this.cell, newEvent);
+            this.events.push(newEvent);
         },
         deleteEvent(index) {
             const event = this.events[index];

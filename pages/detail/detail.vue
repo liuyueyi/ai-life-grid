@@ -1,7 +1,7 @@
 <template>
   <view class="container" :style="{ backgroundImage: `url(${backgroundImage})` }">
     <view class="header">
-      <view class="back-btn" @click="goBack">返回</view>
+      <view class="back-btn" @click="goBack">首页</view>
       <view class="title">{{ getPageTitle() }}</view>
     </view>
 
@@ -15,11 +15,8 @@
     <view class="content">
       <!-- 关键事项 -->
       <view v-if="activeTab === 'events'" class="events-tab">
-        <event-manager 
-        :cell="{ type: cellType, year: cellYear, month: cellMonth, day: cellDay }" 
-        source = "detail"
-        @save="handleEventSave" 
-        @cancel="handleEventCancel" />
+        <event-manager :cell="{ type: cellType, year: cellYear, month: cellMonth, day: cellDay }" source="detail"
+          @save="handleEventSave" @cancel="handleEventCancel" />
       </view>
 
       <!-- 心情日志 -->
@@ -34,16 +31,15 @@
             <view class="mood-header">
               <view class="mood-date">{{ formatDate(log.date) }}</view>
               <view class="mood-score">
-                <text v-for="i in 5" :key="i" 
-                  :class="['mood-star', i <= log.score ? 'active' : '']"
-                  @click="updateMoodScore(index, i)"
-                >★</text>
+                <text v-for="i in 5" :key="i" :class="['mood-star', i <= log.score ? 'active' : '']"
+                  @click="updateMoodScore(index, i)">★</text>
               </view>
               <view class="delete-btn" @click="deleteMoodLog(index)">删除</view>
             </view>
             <textarea v-model="log.content" placeholder="记录今天的心情..." class="mood-content" />
             <view class="mood-images" v-if="log.images && log.images.length > 0">
-              <image v-for="(img, imgIndex) in log.images" :key="imgIndex" :src="img" class="mood-image" mode="aspectFill" />
+              <image v-for="(img, imgIndex) in log.images" :key="imgIndex" :src="img" class="mood-image"
+                mode="aspectFill" />
               <view class="add-image" @click="addImageToLog(index)">+</view>
             </view>
             <view v-else class="add-image-btn" @click="addImageToLog(index)">添加图片</view>
@@ -62,76 +58,9 @@
 
       <!-- 收入支出台账 -->
       <view v-if="activeTab === 'finance'" class="finance-tab">
-        <view class="finance-summary">
-          <view class="summary-item">
-            <text class="summary-label">总收入</text>
-            <text class="summary-value income">¥{{ getTotalIncome() }}</text>
-          </view>
-          <view class="summary-item">
-            <text class="summary-label">总支出</text>
-            <text class="summary-value expense">¥{{ getTotalExpense() }}</text>
-          </view>
-          <view class="summary-item">
-            <text class="summary-label">结余</text>
-            <text class="summary-value">¥{{ getBalance() }}</text>
-          </view>
-        </view>
-
-        <view class="finance-chart">
-          <!-- 这里可以使用图表组件，如 uCharts 或 F2 -->
-          <view class="chart-placeholder">收支图表将在这里显示</view>
-        </view>
-
-        <view class="finance-list">
-          <view v-for="(record, index) in financeRecords" :key="index" class="finance-item">
-            <view class="finance-header">
-              <view class="finance-date">{{ formatDate(record.date) }}</view>
-              <view :class="['finance-type', record.type === 'income' ? 'income' : 'expense']">
-                {{ record.type === 'income' ? '收入' : '支出' }}
-              </view>
-              <view class="delete-btn" @click="deleteFinanceRecord(index)">删除</view>
-            </view>
-            <view class="finance-details">
-              <view class="finance-category">
-                <text class="label">分类:</text>
-                <picker :range="record.type === 'income' ? incomeCategories : expenseCategories"
-                  :value="getCategoryIndex(record)" @change="updateCategory(index, $event)">
-                  <view class="picker-value">{{ record.category || '选择分类' }}</view>
-                </picker>
-              </view>
-              <view class="finance-amount">
-                <text class="label">金额:</text>
-                <input type="digit" v-model="record.amount" placeholder="0.00" class="amount-input" />
-              </view>
-            </view>
-            <textarea v-model="record.description" placeholder="添加备注..." class="finance-description" />
-          </view>
-        </view>
-        <view class="finance-actions">
-          <button class="add-income-btn" @click="addNewFinanceRecord('income')">添加收入</button>
-          <button class="add-expense-btn" @click="addNewFinanceRecord('expense')">添加支出</button>
-        </view>
+        <finance :storage-key="getStorageKey()" @save="handleFinanceSave" />
       </view>
     </view>
-
-    <!-- 标签选择器弹窗 -->
-    <custom-popup ref="tagSelector" type="bottom">
-      <view class="tag-selector">
-        <view class="tag-selector-header">
-          <text class="tag-selector-title">选择标签</text>
-          <text class="tag-selector-close" @click="closeTagSelector">×</text>
-        </view>
-        <view class="tag-list">
-          <view v-for="(tag, index) in availableTags" :key="index" class="tag-item" @click="selectTag(tag)">
-            {{ tag }}
-          </view>
-          <view class="add-tag-item">
-            <input type="text" v-model="newTag" placeholder="新建标签..." class="new-tag-input" />
-            <button class="add-tag-btn" @click="addNewTag">添加</button>
-          </view>
-        </view>
-      </view>
-    </custom-popup>
 
     <!-- 录音弹窗 -->
     <custom-popup ref="voiceRecorder" type="center">
@@ -155,6 +84,7 @@
 <script>
 import TaskUtils from '../../utils/TaskUtils.js';
 import EventManager from '../../components/event-manager/event-manager.vue';
+import Finance from '../../components/finance/finance.vue';
 
 export default {
   components: {
@@ -210,7 +140,7 @@ export default {
       // 处理形如 2025、2025-4、2025-4-3 格式的日期参数
       const dateParts = options.date.split('-').map(Number);
       this.cellYear = dateParts[0];
-      
+
       if (dateParts.length === 1) {
         // 只传入年份
         this.cellType = 'year';
@@ -254,11 +184,14 @@ export default {
       this.saveData();
 
       // 返回上一页
-      uni.navigateBack();
+      // 返回主页
+      uni.reLaunch({
+        url: '/pages/index/index',
+      });
     },
 
     getPageTitle() {
-      const now = new Date();
+      // 根据日期类型返回标题
       switch (this.cellType) {
         case 'year':
           return `${this.cellYear}年`;
@@ -472,53 +405,9 @@ export default {
       }
     },
 
-    // 收支台账相关方法
-    getTotalIncome() {
-      return this.financeRecords
-        .filter(record => record.type === 'income')
-        .reduce((sum, record) => sum + parseFloat(record.amount || 0), 0)
-        .toFixed(2);
-    },
-
-    getTotalExpense() {
-      return this.financeRecords
-        .filter(record => record.type === 'expense')
-        .reduce((sum, record) => sum + parseFloat(record.amount || 0), 0)
-        .toFixed(2);
-    },
-
-    getBalance() {
-      return (parseFloat(this.getTotalIncome()) - parseFloat(this.getTotalExpense())).toFixed(2);
-    },
-
-    addNewFinanceRecord(type) {
-      this.financeRecords.push({
-        id: Date.now(),
-        date: new Date(),
-        type: type,
-        category: type === 'income' ? this.incomeCategories[0] : this.expenseCategories[0],
-        amount: '',
-        description: ''
-      });
-    },
-
-    deleteFinanceRecord(index) {
-      if (index >= 0 && index < this.financeRecords.length) {
-        this.financeRecords.splice(index, 1);
-      }
-    },
-
-    getCategoryIndex(record) {
-      const categories = record.type === 'income' ? this.incomeCategories : this.expenseCategories;
-      return categories.indexOf(record.category);
-    },
-
-    updateCategory(index, event) {
-      if (index >= 0 && index < this.financeRecords.length) {
-        const record = this.financeRecords[index];
-        const categories = record.type === 'income' ? this.incomeCategories : this.expenseCategories;
-        record.category = categories[event.detail.value];
-      }
+    handleFinanceSave(records) {
+      // 处理Finance组件保存事件
+      console.log('Finance records saved:', records);
     }
   }
 };
