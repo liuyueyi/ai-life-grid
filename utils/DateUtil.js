@@ -23,6 +23,15 @@ export class DateUtil {
       .replace(/ss/g, padZero(second))
   }
 
+  static formatEventDate(timestamp) {
+    if (!timestamp) return '';
+    const date = new Date(timestamp);
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
   // 添加天数
   static addDays(date, days) {
     const result = new Date(date)

@@ -21,7 +21,8 @@
                                 placeholder="记录点滴事件..." @input="onEventContentChange" @blur="onBlur(index)" />
                         </view>
                         <view class="event-meta">
-                            <view class="event-time">
+                            <view class="event-time" style="margin-left: -1rem;">
+                                <text> {{ formatEventDate(event.id) }} &nbsp;</text>
                                 <picker mode="time" :value="event.time || currentTime" start="00:00" end="23:59"
                                     @change="onTimeChange($event, index)">
                                     <text>{{ event.time || currentTime }}</text>
@@ -166,6 +167,9 @@ export default {
             uni.navigateTo({
                 url: '/pages/detail/detail?date=' + event.day
             });
+        },
+        formatEventDate(time) {
+            return DateUtil.formatEventDate(time);
         },
         updateCurrentTime() {
             const now = new Date();
