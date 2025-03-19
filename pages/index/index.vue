@@ -74,12 +74,8 @@
           <text class="popup-close" @click="closeCellDetail">×</text>
         </view>
         <view class="popup-content">
-          <event-manager 
-            :visible="true"
-            :cell="selectedCell"
-            @save="saveChanges"
-            @cancel="cancelChanges"
-          />
+          <event-manager :visible="true" :cell="selectedCell" source="index" @save="saveChanges"
+            @cancel="cancelChanges" />
         </view>
       </view>
     </custom-popup>
@@ -222,10 +218,10 @@ export default {
       this.workStartDate = userData.workStartDate;
       this.retirementDate = userData.retirementDate;
       this.lifeExpectancy = userData.lifeExpectancy;
-      
+
       uni.setStorageSync('lifeGridUserData', userData);
       this.initialized = true;
-      
+
       // 生成生命格子数据
       this.generateLifeGrid();
       this.updateVisibleCells();
@@ -832,7 +828,7 @@ export default {
       this.updateCellEventIndicator(this.selectedCell, TaskUtils.hasEvents(this.selectedCell));
 
       // 关闭弹窗
-      this.closeCellDetail();
+      // this.closeCellDetail();
     },
 
     updateCellEventIndicator(cell, hasEvents) {
@@ -887,22 +883,17 @@ export default {
           url: '/pages/detail/detail?date=' + cell.year + '-' + (cell.month + 1) + '-' + cell.day
         });
         return;
+      } else if (this.currentDimension === 'month') {
+        uni.navigateTo({
+          url: '/pages/detail/detail?date=' + cell.year + '-' + (cell.month + 1)
+        });
+      } else if (this.currentDimension === 'year') {
+        uni.navigateTo({
+          url: '/pages/detail/detail?date=' + cell.year
+        });
       }
-      // 根据当前视图类型切换视图
-      switch (this.currentDimension) {
-        case 'month':
-          this.currentYear = cell.year;
-          this.currentMonth = cell.month;
-          this.currentDimension = 'day';
-          break;
-        case 'year':
-          this.currentYear = cell.year;
-          this.currentDimension = 'month';
-          break;
-      }
-      this.updateVisibleCells();
     },
-    
+
     viewFullDetail() {
       if (!this.selectedCell) return;
 

@@ -1,44 +1,63 @@
 <template>
     <view class="event-manager">
         <view class="key-events-section">
-            <text class="section-title">一点一滴</text>
+            <text class="section-title" v-if="source == 'index'">记录生活中的一点一滴</text>
             <view v-for="(event, index) in events" :key="index" class="event-item">
                 <view class="event-dot"></view>
                 <view class="event-content">
-                    <input type="text" v-model="events[index].content" placeholder="记录点滴事件..." @input="onEventContentChange" />
-                    <view class="event-tags">
-                        <text v-for="(tag, tagIndex) in event.tags" :key="tagIndex" class="tag">{{tag}}</text>
-                        <view class="tag-selector">
-                            <view class="tag-selector-trigger" @click="showTagSelector(index)">
-                                <text class="add-tag-icon">+</text>
-                            </view>
-                            <view class="tag-selector-dropdown" v-if="events[index].showTagSelector">
-                                <view class="tag-list">
-                                    <view v-for="(tag, tagIndex) in availableTags" :key="tagIndex" 
-                                          class="tag-item" @click="toggleTag(index, tag)">
-                                        <text class="tag-item-text" :class="{ 'selected': events[index].tags.includes(tag) }">{{tag}}</text>
-                                    </view>
+                    <view class="content-wrapper">
+                        <view v-if="events[index].show" @tap="toEditContent(events[index])">{{ events[index].content }}
+                        </view>
+                        <textarea v-else v-model="events[index].content" :id="'area' + index" :ref="'textarea' + index"
+                            placeholder="记录点滴事件..." @input="onEventContentChange" @blur="onBlur(index)" />
+                    </view>
+                    <view class="event-meta">
+                        <view class="event-time">
+                            <picker mode="time" :value="events[index].time || currentTime" start="00:00" end="23:59"
+                                @change="onTimeChange($event, index)">
+                                <text>{{ events[index].time || currentTime }}</text>
+                            </picker>
+                        </view>
+                        <view class="event-tags">
+                            <text v-for="(tag, tagIndex) in event.tags" :key="tagIndex" :class="['tag', {
+                'tag-urgent': tag === '紧急',
+                'tag-reminder': tag === '提醒',
+                'tag-daily': tag === '日常',
+                'tag-note': tag === '备注',
+                'tag-default': !['紧急', '提醒', '日常', '备注'].includes(tag)
+            }]">
+                                {{ tag }}
+                                <text class="tag-delete" @click.stop="removeTag(index, tagIndex)">×</text>
+                            </text>
+                            <view class="tag-selector">
+                                <view class="tag-selector-trigger" @click="showTagSelector(index)">
+                                    <text class="add-tag-icon">+</text>
                                 </view>
-                                <view class="tag-manage">
-                                    <input type="text" v-model="newTag" placeholder="添加新标签" class="new-tag-input" />
-                                    <button class="add-tag-btn" @click="addNewTag">添加</button>
+                                <view class="tag-selector-dropdown" v-if="events[index].showTagSelector">
+                                    <view class="tag-list">
+                                        <view v-for="(tag, tagIndex) in availableTags" :key="tagIndex" class="tag-item"
+                                            @click="toggleTag(index, tag)">
+                                            <text class="tag-item-text"
+                                                :class="{ 'selected': events[index].tags.includes(tag) }">{{ tag
+                                                }}</text>
+                                        </view>
+                                    </view>
+                                    <view class="tag-manage">
+                                        <input type="text" v-model="newTag" placeholder="添加新标签" class="new-tag-input" />
+                                        <button class="add-tag-btn" @click="addNewTag">添加</button>
+                                    </view>
                                 </view>
                             </view>
                         </view>
                     </view>
                 </view>
-                <view class="event-time">
-                    <picker mode="time" :value="events[index].time || currentTime" start="00:00" end="23:59" @change="onTimeChange($event, index)">
-                        <text>{{events[index].time || currentTime}}</text>
-                    </picker>
-                </view>
+
                 <text class="delete-event" @click="deleteEvent(index)">×</text>
             </view>
-            <button class="add-event-btn" @click="addNewEvent">+</button>
+            <button class="add-event-btn" @click="addNewEvent" v-if="source == 'index'">+</button>
         </view>
-        <view class="button-group">
-            <button class="cancel-btn" @click="cancel">取消</button>
-            <button class="save-btn" @click="save">保存</button>
+        <view class="floating-add-btn" @click="addNewEvent" v-if="source != 'index'">
+            <text class="floating-add-icon">+</text>
         </view>
     </view>
 </template>
@@ -53,6 +72,10 @@ export default {
             type: Object,
             default: () => { }
         },
+        source: {
+            type: String,
+            default: 'index'
+        }
     },
     data() {
         return {
@@ -60,7 +83,8 @@ export default {
             currentTime: '',
             availableTags: [],
             newTag: '',
-            visible: false
+            visible: false,
+            expandedEvents: []
         }
     },
     watch: {
@@ -69,7 +93,12 @@ export default {
             handler(newEvents) {
                 console.log('cell发生了变更 = ', newEvents);
                 this.events = TaskUtils.getEvents(this.cell);
-                console.log('cell发生了变更，读取的内容是：', this.cell, this.events);
+                for (let e of this.events) {
+                    e.show = true;
+                }
+                if (this.events.length < 1) {
+                    this.addNewEvent();
+                }
             }
         },
     },
@@ -86,13 +115,19 @@ export default {
             const minutes = String(now.getMinutes()).padStart(2, '0');
             this.currentTime = `${hours}:${minutes}`;
         },
+        onBlur(index) {
+            this.$set(this.events[index], 'show', true);
+            this.save();
+        },
         addNewEvent() {
             const newEvent = {
                 content: '',
                 tags: [],
                 time: this.currentTime,
+                show: false,
                 isEditing: true,
-                isNew: true
+                isNew: true,
+                expanded: false
             };
             const createdEvent = TaskUtils.createEvent(this.cell, newEvent);
             this.events.push(createdEvent);
@@ -103,12 +138,33 @@ export default {
                 this.events.splice(index, 1);
             }
         },
-        onEventContentChange() {
-            // 事件内容变更时可以添加额外处理
+        toEditContent(e) {
+            // 进入编辑状态
+            e.show = false;
+            // 等待DOM更新后获取焦点
+            this.$nextTick(() => {
+                const index = this.events.findIndex(event => event === e);
+                // 使用uni-app的ref获取组件实例
+                const query = uni.createSelectorQuery().in(this);
+                query.select('#area' + index).node()
+                    .exec((res) => {
+                        if (res && res[0]) {
+                            const textarea = res[0].node;
+                            textarea.focus();
+                        }
+                    });
+            });
         },
-
+        onEventContentChange(e) {
+            console.log('内容发生了变更', e.detail.value);
+            if (e.detail.value) {
+                // 保存内容
+                this.save();
+            }
+        },
         onTimeChange(event, index) {
             this.events[index].time = event.detail.value;
+            this.save();
         },
 
         showTagSelector(index) {
@@ -127,6 +183,7 @@ export default {
                 event.tags.splice(tagIndex, 1);
             }
             event.showTagSelector = false;
+            this.save();
         },
 
         addNewTag() {
@@ -136,20 +193,37 @@ export default {
                 this.newTag = '';
             }
         },
+
+        removeTag(eventIndex, tagIndex) {
+            const event = this.events[eventIndex];
+            event.tags.splice(tagIndex, 1);
+            this.save();
+        },
         cancel() {
             this.$emit('cancel')
         },
+        toggleExpand(index) {
+            this.$set(this.events[index], 'expanded', !this.events[index].expanded);
+        },
         save() {
+            // 删除内容为空的事件
+            this.events = this.events.filter(event => {
+                if (event.content.trim() === '') {
+                    if (event.id) {
+                        TaskUtils.deleteEvent(this.cell, event.id);
+                    }
+                    return false;
+                }
+                return true;
+            });
+
             console.log('保存的内容是：', this.cell, this.events);
             const validEvents = this.events
-                .filter(event => event.content.trim() !== '')
                 .map(({ isEditing, isNew, ...event }) => {
                     isNew = event.id ? false : true;
                     if (isNew) {
-                        console.log('新建事件', this.cell, event)
                         return TaskUtils.createEvent(this.cell, event);
                     } else {
-                        console.log('更新事件', this.cell, event)
                         return TaskUtils.updateEvent(this.cell, event.id, event);
                     }
                 });
@@ -183,6 +257,7 @@ export default {
     border-radius: 8px;
     padding: 12px;
     position: relative;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .event-dot {
@@ -198,27 +273,69 @@ export default {
     flex: 1;
 }
 
-.event-content input {
+.content-wrapper {
+    position: relative;
     width: 100%;
-    height: 35px;
+}
+
+.event-content textarea {
+    width: 100%;
+    min-height: 35px;
     border: none;
     padding: 0;
     font-size: 14px;
-}
-
-.event-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 8px;
+    resize: none;
+    overflow: hidden;
+    transition: height 0.3s ease;
+    box-sizing: border-box;
+    line-height: 1.5;
 }
 
 .tag {
     padding: 2px 8px;
-    background-color: #F5F5F5;
     border-radius: 4px;
     font-size: 12px;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.tag-urgent {
+    background-color: #FFE4E4;
+    color: #D32F2F;
+}
+
+.tag-reminder {
+    background-color: #E3F2FD;
+    color: #1976D2;
+}
+
+.tag-daily {
+    background-color: #E8F5E9;
+    color: #388E3C;
+}
+
+.tag-note {
+    background-color: #FFF3E0;
+    color: #E64A19;
+}
+
+.tag-default {
+    background-color: #F5F5F5;
     color: #666;
+}
+
+.tag-delete {
+    font-size: 12px;
+    color: #999;
+    cursor: pointer;
+    padding: 2px;
+    line-height: 1;
+}
+
+.tag-delete:hover {
+    color: #FF5B5B;
 }
 
 .tag-selector {
@@ -314,11 +431,30 @@ export default {
     background-color: #0066d6;
 }
 
+.event-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 8px;
+}
+
 .event-time {
     font-size: 12px;
     color: #999;
     margin-right: 10px;
     white-space: nowrap;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+}
+
+.event-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+    align-items: center;
 }
 
 .delete-event {
@@ -384,5 +520,31 @@ export default {
     background-color: #0066d6;
     transform: translateY(-1px);
     box-shadow: 0 2px 8px rgba(0, 122, 255, 0.25);
+}
+
+.floating-add-btn {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    width: 50px;
+    height: 50px;
+    background-color: #007AFF;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 12px rgba(0, 122, 255, 0.3);
+    transition: transform 0.2s ease;
+    z-index: 1000;
+}
+
+.floating-add-btn:active {
+    transform: scale(0.95);
+}
+
+.floating-add-icon {
+    color: white;
+    font-size: 24px;
+    font-weight: bold;
 }
 </style>

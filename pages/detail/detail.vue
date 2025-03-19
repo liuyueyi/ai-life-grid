@@ -15,26 +15,11 @@
     <view class="content">
       <!-- 关键事项 -->
       <view v-if="activeTab === 'events'" class="events-tab">
-        <view class="events-list">
-          <view v-for="(event, index) in events" :key="index" class="event-item">
-            <view class="event-header">
-              <checkbox :checked="event.completed" @click="toggleEventComplete(index)" />
-              <input type="text" v-model="event.title" placeholder="事项标题..." class="event-title" />
-              <view class="event-actions">
-                <view class="tag-btn" @click="showTagSelector(index)">标签</view>
-                <view class="delete-btn" @click="deleteEvent(index)">删除</view>
-              </view>
-            </view>
-            <textarea v-model="event.description" placeholder="添加详细描述..." class="event-description" />
-            <view v-if="event.tags && event.tags.length > 0" class="event-tags">
-              <view v-for="(tag, tagIndex) in event.tags" :key="tagIndex" class="event-tag">
-                {{ tag }}
-                <text class="remove-tag" @click="removeTag(index, tagIndex)">×</text>
-              </view>
-            </view>
-          </view>
-        </view>
-        <button class="add-btn" @click="addNewEvent">添加新事项</button>
+        <event-manager 
+        :cell="{ type: cellType, year: cellYear, month: cellMonth, day: cellDay }" 
+        source = "detail"
+        @save="handleEventSave" 
+        @cancel="handleEventCancel" />
       </view>
 
       <!-- 心情日志 -->
@@ -168,27 +153,30 @@
 </template>
 
 <script>
+import TaskUtils from '../../utils/TaskUtils.js';
+import EventManager from '../../components/event-manager/event-manager.vue';
+
 export default {
+  components: {
+    EventManager
+  },
   data() {
     return {
       backgroundImage: '/static/images/default-bg.jpg',
+      cell: {},
       cellType: '',
       cellYear: 0,
       cellMonth: 0,
       cellDay: 1,
-      cellWeek: 0,
 
       boardTools: ["pen", "eraser", "color", "text", "back", "clear", "upload", "save"],
 
       tabs: [
-        { id: 'events', name: '关键事项' },
+        { id: 'events', name: '我的记录' },
         { id: 'mood', name: '心情日志' },
         { id: 'finance', name: '收支台账' }
       ],
       activeTab: 'events',
-
-      // 关键事项数据
-      events: [],
 
       // 心情日志数据
       moodLogs: [],
@@ -218,11 +206,34 @@ export default {
     this.particleEffect = app.globalData.particleEffect;
 
     // 获取页面参数
-    this.cellType = options.type || 'day';
-    this.cellYear = parseInt(options.year) || new Date().getFullYear();
-    this.cellMonth = parseInt(options.month) || new Date().getMonth();
-    this.cellDay = parseInt(options.day) || new Date().getDate();
-    this.cellWeek = parseInt(options.week) || 0;
+    if (options.date) {
+      // 处理形如 2025、2025-4、2025-4-3 格式的日期参数
+      const dateParts = options.date.split('-').map(Number);
+      this.cellYear = dateParts[0];
+      
+      if (dateParts.length === 1) {
+        // 只传入年份
+        this.cellType = 'year';
+        this.cellMonth = null;
+        this.cellDay = null;
+      } else if (dateParts.length === 2) {
+        // 传入年月
+        this.cellType = 'month';
+        this.cellMonth = dateParts[1] - 1; // 月份需要减1，因为Date对象中月份是从0开始的
+        this.cellDay = null;
+      } else {
+        // 传入年月日
+        this.cellType = 'day';
+        this.cellMonth = dateParts[1] - 1; // 月份需要减1，因为Date对象中月份是从0开始的
+        this.cellDay = dateParts[2];
+      }
+    } else {
+      // 处理原有的参数格式
+      this.cellType = options.type || 'day';
+      this.cellYear = parseInt(options.year) || new Date().getFullYear();
+      this.cellMonth = parseInt(options.month) || new Date().getMonth();
+      this.cellDay = parseInt(options.day) || new Date().getDate();
+    }
 
     // 加载数据
     this.loadData();
@@ -280,12 +291,16 @@ export default {
 
     // 数据加载和保存
     loadData() {
-      // 根据格子类型和日期加载数据
-      const storageKey = this.getStorageKey();
-
       // 加载关键事项
-      const eventsKey = `${storageKey}_events`;
-      this.events = uni.getStorageSync(eventsKey) || [];
+      this.cell = {
+        type: this.cellType,
+        year: this.cellYear,
+        month: this.cellMonth,
+        day: this.cellDay
+      };
+
+      // 缓存key
+      const storageKey = this.getStorageKey();
 
       // 加载心情日志
       const moodKey = `${storageKey}_mood`;
@@ -299,10 +314,6 @@ export default {
     saveData() {
       const storageKey = this.getStorageKey();
 
-      // 保存关键事项
-      const eventsKey = `${storageKey}_events`;
-      uni.setStorageSync(eventsKey, this.events);
-
       // 保存心情日志
       const moodKey = `${storageKey}_mood`;
       uni.setStorageSync(moodKey, this.moodLogs);
@@ -310,138 +321,22 @@ export default {
       // 保存收支台账
       const financeKey = `${storageKey}_finance`;
       uni.setStorageSync(financeKey, this.financeRecords);
-
-      // 更新主页格子的事件标记
-      this.updateCellEventIndicator();
     },
 
     getStorageKey() {
-      switch (this.cellType) {
-        case 'year':
-          return `detail_year_${this.cellYear}`;
-        case 'month':
-          return `detail_month_${this.cellYear}_${this.cellMonth}`;
-        case 'week':
-          return `detail_week_${this.cellYear}_${this.cellMonth}_${this.cellWeek}`;
-        case 'day':
-          return `detail_day_${this.cellYear}_${this.cellMonth}_${this.cellDay}`;
-        default:
-          return '';
-      }
+      return TaskUtils.generateStorageKey(this.cell);
     },
 
-    updateCellEventIndicator() {
-      // 检查是否有任何数据
-      const hasData = this.events.length > 0 || this.moodLogs.length > 0 || this.financeRecords.length > 0;
-
-      // 获取对应的格子存储键
-      let cellKey = '';
-      switch (this.cellType) {
-        case 'year':
-          cellKey = `events_year_${this.cellYear}`;
-          break;
-        case 'month':
-          cellKey = `events_month_${this.cellYear}_${this.cellMonth}`;
-          break;
-        case 'week':
-          cellKey = `events_week_${this.cellYear}_${this.cellMonth}_${this.cellWeek}`;
-          break;
-        case 'day':
-          cellKey = `events_day_${this.cellYear}_${this.cellMonth}_${this.cellDay}`;
-          break;
-      }
-
-      // 更新格子事件标记
-      if (cellKey) {
-        const cellEvents = uni.getStorageSync(cellKey) || [];
-
-        // 如果有数据但没有事件标记，添加一个空事件以显示标记
-        if (hasData && cellEvents.length === 0) {
-          uni.setStorageSync(cellKey, [{ content: '有详细记录' }]);
-        }
-        // 如果没有数据但有事件标记，清除事件标记
-        else if (!hasData && cellEvents.length > 0) {
-          uni.setStorageSync(cellKey, []);
-        }
-      }
+    // 事件管理器相关方法
+    handleEventSave(events) {
+      this.events = events;
+      this.saveData();
     },
 
-    // 关键事项相关方法
-    addNewEvent() {
-      this.events.push({
-        id: Date.now(),
-        title: '',
-        description: '',
-        completed: false,
-        tags: [],
-        createdAt: new Date()
-      });
+    handleEventCancel() {
+      this.loadData();
     },
 
-    toggleEventComplete(index) {
-      if (index >= 0 && index < this.events.length) {
-        this.events[index].completed = !this.events[index].completed;
-      }
-    },
-
-    deleteEvent(index) {
-      if (index >= 0 && index < this.events.length) {
-        this.events.splice(index, 1);
-      }
-    },
-
-    showTagSelector(index) {
-      this.currentEventIndex = index;
-      this.$refs.tagSelector.open();
-    },
-
-    closeTagSelector() {
-      this.$refs.tagSelector.close();
-      this.currentEventIndex = -1;
-      this.newTag = '';
-    },
-
-    selectTag(tag) {
-      if (this.currentEventIndex >= 0 && this.currentEventIndex < this.events.length) {
-        const event = this.events[this.currentEventIndex];
-
-        // 检查标签是否已存在
-        if (!event.tags) {
-          event.tags = [];
-        }
-
-        if (!event.tags.includes(tag)) {
-          event.tags.push(tag);
-        }
-      }
-    },
-
-    removeTag(eventIndex, tagIndex) {
-      if (eventIndex >= 0 && eventIndex < this.events.length) {
-        const event = this.events[eventIndex];
-        if (event.tags && tagIndex >= 0 && tagIndex < event.tags.length) {
-          event.tags.splice(tagIndex, 1);
-        }
-      }
-    },
-
-    addNewTag() {
-      if (this.newTag.trim() === '') return;
-
-      // 添加到可用标签列表
-      if (!this.availableTags.includes(this.newTag)) {
-        this.availableTags.push(this.newTag);
-
-        // 保存可用标签
-        uni.setStorageSync('availableTags', this.availableTags);
-      }
-
-      // 添加到当前事项
-      this.selectTag(this.newTag);
-
-      // 清空输入
-      this.newTag = '';
-    },
 
     // 心情日志相关方法
     formatDate(date) {

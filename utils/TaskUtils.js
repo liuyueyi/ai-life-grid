@@ -5,9 +5,9 @@ export class TaskUtils {
     static generateStorageKey(params) {
         const { type, year, month, week, day } = params;
         let key = `events_${type}_${year}`;
-        if (month !== undefined) key += `_${month}`;
-        if (week !== undefined) key += `_w${week}`;
-        if (day !== undefined) key += `_${day}`;
+        if (month !== undefined && month != null) key += `_${month}`;
+        if (week !== undefined && week != null) key += `_w${week}`;
+        if (day !== undefined && day != null) key += `_${day}`;
         return key;
     }
 
@@ -18,6 +18,7 @@ export class TaskUtils {
     // 获取事件列表
     static getEvents(params) {
         const key = this.generateStorageKey(params);
+        console.log('获取时间列表的key = ', key);
         return uni.getStorageSync(key) || [];
     }
 
