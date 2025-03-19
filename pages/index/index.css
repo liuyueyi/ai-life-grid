@@ -370,6 +370,8 @@
   background-color: white;
   border-radius: 15px;
   overflow: hidden;
+  max-height: 66vh; /* 设置最大高度为屏幕高度的2/3 */
+  overflow-y: auto;
 }
 
 .popup-header {
@@ -412,6 +414,8 @@
 
 .popup-content {
   padding: 15px;
+  overflow-y: auto; /* 添加垂直滚动 */
+  max-height: calc(66vh - 75px); /* 减去header的高度 */
 }
 
 .button-group {

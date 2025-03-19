@@ -67,7 +67,7 @@
     </view>
 
     <!-- 格子详情弹窗 -->
-    <custom-popup ref="cellDetailPopup" type="center">
+    <custom-popup ref="cellDetailPopup" type="center" height="68vh">
       <view class="cell-detail-popup">
         <view class="popup-header">
           <text class="popup-title">{{ selectedCell ? showPopupTitle(selectedCell) : '' }}</text>
