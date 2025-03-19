@@ -145,6 +145,8 @@
 </template>
 
 <script>
+import { DateUtil } from '../../utils/DateUtil.js';
+
 export default {
     name: 'Finance',
     props: {
@@ -218,13 +220,56 @@ export default {
                 this.buttonOpacity = 0.3;
             }, 1500);
         },
-        loadData() {
-            const financeKey = `${this.storageKey}_finance`;
-            this.financeRecords = uni.getStorageSync(financeKey) || [];
+        getFinanceKey(year, month, day) {
+            return `finance_${year}_${month}_${day}`;
         },
+        getFinanceRecords(year, month, day) {
+            const key = this.getFinanceKey(year, month, day);
+            return uni.getStorageSync(key) || []
+        },
+        loadData() {
+            if (this.cell.type === 'year') {
+                // 加载整年的记录
+                let records = [];
+                for (let month = 12; month >= 0; month--) {
+                    for (let day = DateUtil.getDays(this.cell.year, month); day > 0; day--) {
+                        let r = this.getFinanceRecords(this.cell.year, month, day);
+                        if (r && r.length > 0) {
+                            records = records.concat(r);
+                        }
+                    }
+                }
+                this.financeRecords = records;
+            } else if (this.cell.type === 'month') {
+                // 加载本月每一天的记录
+                console.log('加载本月每一天的记录')
+                let records = [];
+                for (let day = DateUtil.getDays(this.cell.year, this.cell.month); day > 0; day--) {
+                    let r = this.getFinanceRecords(this.cell.year, this.cell.month, day);
+                    if (r && r.length > 0) {
+                        records = records.concat(r);
+                    }
+                }
+                this.financeRecords = records;
+                console.log('加载日记录', this.financeRecords)
+            } else {
+                // 日维度记录
+                this.financeRecords = this.getFinanceRecords(this.cell.year, this.cell.month, this.cell.day);
+            }
+        },
+
         saveData() {
-            const financeKey = `${this.storageKey}_finance`;
-            uni.setStorageSync(financeKey, this.financeRecords);
+            if (this.cell.type === 'year') {
+
+            } else if (this.cell.type === 'month') {
+                const financeKey = this.getFinanceKey(this.cell.year, this.cell.month, this.cell.day);
+
+            } else {
+                // 保存日记录
+                const financeKey = this.getFinanceKey(this.cell.year, this.cell.month, this.cell.day);
+                uni.setStorageSync(financeKey, this.financeRecords);
+            }
+
             this.$emit('save', this.financeRecords);
         },
         getCategoryStats() {
