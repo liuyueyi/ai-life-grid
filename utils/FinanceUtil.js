@@ -36,12 +36,13 @@ export class FinanceUtil {
 
     // 具体查询某一天的收支记录
     static getFinanceRecords(year, month, day) {
+        // 传入的月是 0 -11
         const key = this.getFinanceKey(year, month, day);
         return uni.getStorageSync(key) || []
     }
 
     static deleteDayRecord(record) {
-        // 删除记录
+        // 删除记录，显示的月是 1 - 12，存储的月是 0 - 11，这里已经实现了转换
         const { year, month, day } = DateUtil.parseDateString(record.date);
         const financeKey = this.getFinanceKey(year, month, day);
         let records = uni.getStorageSync(financeKey) || []
@@ -53,7 +54,7 @@ export class FinanceUtil {
     }
 
     static saveDayRecord(record) {
-        // 添加记录
+        // 添加记录, 显示的月是 1 - 12，存储的月是 0 - 11，这里已经实现了转换
         const { year, month, day } = DateUtil.parseDateString(record.date);
         const financeKey = this.getFinanceKey(year, month, day);
         let records = uni.getStorageSync(financeKey) || []

@@ -256,6 +256,7 @@ export default {
                 }
             } else {
                 // 日维度记录
+                console.log('详情页查询收支记录的传参', this.cell.year, this.cell.month, this.cell.day);
                 this.financeRecords = FinanceUtil.getFinanceRecords(this.cell.year, this.cell.month, this.cell.day);
                 this.financeDate = {
                     year: this.cell.year,

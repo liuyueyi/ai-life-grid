@@ -25,11 +25,9 @@
         </view>
       </view>
 
-      <view v-if="showDayCard">
-        <CalendarCard :year="this.selectedCell.year" :month="this.selectedCell.month" :day="this.selectedCell.day"
-          @date-change="handleDateChange">
-        </CalendarCard>
-      </view>
+      <CalendarCard :year="this.selectedCell.year" :month="this.selectedCell.month" :day="this.selectedCell.day"
+        @date-change="handleDateChange" v-if="showDayCard">
+      </CalendarCard>
       <view v-else>
         <view class="grid-header">
           <text class="nav-arrow" @click="navigatePrevious" v-if="this.currentDimension != 'year'">◀</text>

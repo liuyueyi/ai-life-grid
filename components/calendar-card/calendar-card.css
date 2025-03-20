@@ -1,0 +1,254 @@
+.calendar-container {
+    position: relative;
+    width: 100%;
+    height: calc(100vh - 44px - 40px);
+    /* 减去导航栏高度44px和dimension-selector高度40px */
+    overflow: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    /* 增加弹性滚动效果 */
+}
+
+.calendar-card {
+    position: absolute;
+    width: calc(100% - 40rpx);
+    min-height: calc(100vh - 44px - 40px - 40rpx);
+    margin: 20rpx;
+    border-radius: 20rpx;
+    overflow: hidden;
+    box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
+    background-color: #fff;
+}
+
+.current-card {
+    z-index: 2;
+    left: 0;
+    top: 0;
+}
+
+.next-card {
+    z-index: 1;
+    left: 0;
+    top: 0;
+    transform: translateX(100%);
+}
+
+.previous-card {
+    z-index: 1;
+    left: 0;
+    top: 0;
+    transform: translateX(-100%);
+}
+
+.card-header {
+    height: 60vh;
+    background-size: cover;
+    background-position: center;
+    padding: 30rpx;
+    position: relative;
+}
+
+.card-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.date-info {
+    position: relative;
+    z-index: 1;
+    color: #fff;
+}
+
+.date {
+    font-size: 72rpx;
+    font-weight: bold;
+}
+
+.month-year {
+    font-size: 32rpx;
+    margin-left: 10rpx;
+}
+
+.quote {
+    position: relative;
+    z-index: 1;
+    color: #fff;
+    font-size: 28rpx;
+    margin-top: 20rpx;
+    font-style: italic;
+}
+
+.card-content {
+    background: #fff;
+    padding: 20rpx;
+    min-height: 20vh;
+}
+
+.section {
+    margin-bottom: 30rpx;
+}
+
+.section-title {
+    font-size: 28rpx;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 15rpx;
+}
+
+.event-item,
+.finance-item,
+.mood-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15rpx;
+    margin-bottom: 15rpx;
+    background-color: white;
+    border-radius: 10rpx;
+    box-shadow: 0 2rpx 5rpx rgba(0, 0, 0, 0.1);
+}
+
+.event-left,
+.finance-left {
+    display: flex;
+    align-items: center;
+    flex: 1;
+}
+
+.event-right,
+.finance-right {
+    display: flex;
+    align-items: center;
+    gap: 15rpx;
+}
+
+.event-indicator {
+    color: #8e44ad;
+    margin-right: 10rpx;
+    font-size: 24rpx;
+}
+
+.event-text {
+    font-size: 28rpx;
+    color: #333;
+}
+
+.event-tags {
+    display: flex;
+    gap: 8rpx;
+}
+
+.event-tag {
+    font-size: 20rpx;
+    padding: 4rpx 8rpx;
+    background-color: #f0f0f0;
+    border-radius: 4rpx;
+    color: #666;
+}
+
+.event-time,
+.finance-time {
+    font-size: 24rpx;
+    color: #666;
+}
+
+.finance-emoji {
+    font-size: 32rpx;
+    margin-right: 10rpx;
+}
+
+.finance-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.finance-category {
+    font-size: 28rpx;
+    color: #333;
+}
+
+.finance-remark {
+    font-size: 24rpx;
+    color: #999;
+    margin-top: 4rpx;
+}
+
+.finance-amount {
+    font-size: 28rpx;
+    font-weight: bold;
+    margin-left: 15rpx;
+}
+
+.finance-amount.income {
+    color: #4CAF50;
+}
+
+.finance-amount.expense {
+    color: #F44336;
+}
+
+.delete-btn {
+    font-size: 32rpx;
+    color: #999;
+    padding: 0 10rpx;
+    cursor: pointer;
+}
+
+.mood-emoji {
+    font-size: 32rpx;
+    margin-right: 10rpx;
+}
+
+/* 空状态样式 */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60rpx 0;
+}
+
+.empty-icon {
+    font-size: 80rpx;
+    margin-bottom: 20rpx;
+    color: #ccc;
+}
+
+.empty-text {
+    font-size: 32rpx;
+    color: #666;
+    margin-bottom: 10rpx;
+}
+
+.empty-subtext {
+    font-size: 24rpx;
+    color: #999;
+    text-align: center;
+}
+
+.floating-button {
+    position: fixed;
+    right: 40rpx;
+    bottom: 40rpx;
+    width: 100rpx;
+    height: 100rpx;
+    background: #8e44ad;
+    opacity: 0.3;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.2);
+    z-index: 999;
+}
+
+.plus-icon {
+    color: #fff;
+    font-size: 48rpx;
+    font-weight: bold;
+}

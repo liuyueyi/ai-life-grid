@@ -57,8 +57,8 @@
             </view>
         </view>
 
-        <view class="calendar-card current-card"
-         @touchstart="handleTouchStart" @touchmove="handleTouchMove"
+        <!-- 先临时关闭卡片切换 -->
+        <view class="calendar-card current-card" @touchstart="handleTouchStart" @touchmove="handleTouchMove"
             @touchend="handleTouchEnd"
             :style="{ transform: `translateX(${translateX}px)`, transition: isAnimating ? 'transform 0.3s' : 'none' }">
             <!-- 当前卡片内容 -->
@@ -211,6 +211,26 @@ export default {
             default: 1
         }
     },
+    watch: {
+        year: {
+            immediate: true,
+            handler(n) {
+                this.initAllDate();
+            }
+        },
+        month: {
+            immediate: true,
+            handler(n) {
+                this.initAllDate();
+            }
+        },
+        day: {
+            immediate: true,
+            handler(n) {
+                this.initAllDate();
+            }
+        }
+    },
     data() {
         return {
             backgroundImage: 'https://picsum.photos/400/800',
@@ -251,11 +271,14 @@ export default {
     created() {
         const sysInfo = uni.getSystemInfoSync();
         this.windowWidth = sysInfo.windowWidth;
-        this.initializeData();
-        this.initializeNextDay();
-        this.initializePreviousDay();
     },
     methods: {
+        initAllDate() {
+            this.initializeData();
+            this.initializeNextDay();
+            this.initializePreviousDay();
+            console.log('发生了变更，准备更新数据了:', this.year, this.month, this.day);
+        },
         initializePreviousDay() {
             const currentDate = new Date(this.year, this.month, this.day);
             const previousDate = DateUtil.addDays(currentDate, -1);
@@ -264,11 +287,6 @@ export default {
             this.previousDay = previousDate.getDate();
             this.previousDailyQuote = this.dailyQuotes[Math.floor(Math.random() * this.dailyQuotes.length)];
 
-            // 加载前一天的数据
-            this.loadPreviousDayData();
-        },
-
-        loadPreviousDayData() {
             // 获取前一天的任务数据
             const previousCell = {
                 type: 'day',
@@ -279,11 +297,10 @@ export default {
             this.previousEvents = TaskUtils.getEvents(previousCell) || [];
 
             // 获取前一天的收支数据
-            const previousDate = `${this.previousYear}-${this.previousMonth + 1}-${this.previousDay}`;
             this.previousFinances = FinanceUtil.getFinanceRecords(this.previousYear, this.previousMonth, this.previousDay) || [];
 
             // 获取前一天的心情数据
-            const previousMoodKey = `${previousDate}_mood`;
+            const previousMoodKey = `${this.previousYear}-${this.previousMonth + 1}-${this.previousDay}_mood`;
             this.previousMoods = uni.getStorageSync(previousMoodKey) || [];
         },
 
@@ -295,11 +312,6 @@ export default {
             this.nextDay = nextDate.getDate();
             this.nextDailyQuote = this.dailyQuotes[Math.floor(Math.random() * this.dailyQuotes.length)];
 
-            // 加载下一天的数据
-            this.loadNextDayData();
-        },
-
-        loadNextDayData() {
             // 获取下一天的任务数据
             const nextCell = {
                 type: 'day',
@@ -310,11 +322,10 @@ export default {
             this.nextEvents = TaskUtils.getEvents(nextCell) || [];
 
             // 获取下一天的收支数据
-            const nextDate = `${this.nextYear}-${this.nextMonth + 1}-${this.nextDay}`;
             this.nextFinances = FinanceUtil.getFinanceRecords(this.nextYear, this.nextMonth, this.nextDay) || [];
 
             // 获取下一天的心情数据
-            const nextMoodKey = `${nextDate}_mood`;
+            const nextMoodKey = `${this.nextYear}-${this.nextMonth + 1}-${this.nextDay}_mood`;
             this.nextMoods = uni.getStorageSync(nextMoodKey) || [];
         },
         handleTouchStart(event) {
@@ -338,9 +349,11 @@ export default {
                 const currentDate = new Date(this.year, this.month, this.day);
                 let newDate;
                 if (diffX > 0) {
+                    // 前一天
                     newDate = DateUtil.addDays(currentDate, -1);
                     this.translateX = this.windowWidth;
                 } else {
+                    // 后一天
                     newDate = DateUtil.addDays(currentDate, 1);
                     this.translateX = -this.windowWidth;
                 }
@@ -407,11 +420,13 @@ export default {
                 month: this.month,
                 day: this.day
             };
+            // 获取记录列表
             this.events = TaskUtils.getEvents(cell) || [];
 
             // 获取收支数据
-            const { year, month, day } = DateUtil.parseDateString(date);
-            this.finances = FinanceUtil.getFinanceRecords(year, month, day) || [];
+            console.log('查询收支记录的传参:', this.year, this.month, this.day);
+            this.finances = FinanceUtil.getFinanceRecords(this.year, this.month, this.day) || [];
+            console.log('收支数据:', this.finances); // 打印收支数据
 
             // 获取心情数据
             const moodKey = `${date}_mood`;
@@ -426,254 +441,5 @@ export default {
 };
 </script>
 <style>
-.calendar-container {
-    position: relative;
-    width: 100%;
-    height: 100vh;
-    padding-bottom: 2vh;
-    overflow: hidden;
-}
-
-.calendar-card {
-    position: absolute;
-    width: calc(100% - 40rpx);
-    height: calc(100% - 40rpx);
-    margin: 20rpx;
-    border-radius: 20rpx;
-    overflow: hidden;
-    box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
-    background-color: #fff;
-}
-
-.current-card {
-    z-index: 2;
-    left: 0;
-    top: 0;
-}
-
-.next-card {
-    z-index: 1;
-    left: 0;
-    top: 0;
-    transform: translateX(100%);
-}
-
-.previous-card {
-    z-index: 1;
-    left: 0;
-    top: 0;
-    transform: translateX(-100%);
-}
-
-.card-header {
-    height: 60vh;
-    background-size: cover;
-    background-position: center;
-    padding: 30rpx;
-    position: relative;
-}
-
-.card-header::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.3);
-}
-
-.date-info {
-    position: relative;
-    z-index: 1;
-    color: #fff;
-}
-
-.date {
-    font-size: 72rpx;
-    font-weight: bold;
-}
-
-.month-year {
-    font-size: 32rpx;
-    margin-left: 10rpx;
-}
-
-.quote {
-    position: relative;
-    z-index: 1;
-    color: #fff;
-    font-size: 28rpx;
-    margin-top: 20rpx;
-    font-style: italic;
-}
-
-.card-content {
-    background: #fff;
-    padding: 20rpx;
-}
-
-.section {
-    margin-bottom: 30rpx;
-}
-
-.section-title {
-    font-size: 28rpx;
-    font-weight: bold;
-    color: #333;
-    margin-bottom: 15rpx;
-}
-
-.event-item,
-.finance-item,
-.mood-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15rpx;
-    margin-bottom: 15rpx;
-    background-color: white;
-    border-radius: 10rpx;
-    box-shadow: 0 2rpx 5rpx rgba(0, 0, 0, 0.1);
-}
-
-.event-left,
-.finance-left {
-    display: flex;
-    align-items: center;
-    flex: 1;
-}
-
-.event-right,
-.finance-right {
-    display: flex;
-    align-items: center;
-    gap: 15rpx;
-}
-
-.event-indicator {
-    color: #8e44ad;
-    margin-right: 10rpx;
-    font-size: 24rpx;
-}
-
-.event-text {
-    font-size: 28rpx;
-    color: #333;
-}
-
-.event-tags {
-    display: flex;
-    gap: 8rpx;
-}
-
-.event-tag {
-    font-size: 20rpx;
-    padding: 4rpx 8rpx;
-    background-color: #f0f0f0;
-    border-radius: 4rpx;
-    color: #666;
-}
-
-.event-time,
-.finance-time {
-    font-size: 24rpx;
-    color: #666;
-}
-
-.finance-emoji {
-    font-size: 32rpx;
-    margin-right: 10rpx;
-}
-
-.finance-info {
-    display: flex;
-    flex-direction: column;
-}
-
-.finance-category {
-    font-size: 28rpx;
-    color: #333;
-}
-
-.finance-remark {
-    font-size: 24rpx;
-    color: #999;
-    margin-top: 4rpx;
-}
-
-.finance-amount {
-    font-size: 28rpx;
-    font-weight: bold;
-    margin-left: 15rpx;
-}
-
-.finance-amount.income {
-    color: #4CAF50;
-}
-
-.finance-amount.expense {
-    color: #F44336;
-}
-
-.delete-btn {
-    font-size: 32rpx;
-    color: #999;
-    padding: 0 10rpx;
-    cursor: pointer;
-}
-
-.mood-emoji {
-    font-size: 32rpx;
-    margin-right: 10rpx;
-}
-
-/* 空状态样式 */
-.empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 60rpx 0;
-}
-
-.empty-icon {
-    font-size: 80rpx;
-    margin-bottom: 20rpx;
-    color: #ccc;
-}
-
-.empty-text {
-    font-size: 32rpx;
-    color: #666;
-    margin-bottom: 10rpx;
-}
-
-.empty-subtext {
-    font-size: 24rpx;
-    color: #999;
-    text-align: center;
-}
-
-.floating-button {
-    position: fixed;
-    right: 40rpx;
-    bottom: 40rpx;
-    width: 100rpx;
-    height: 100rpx;
-    background: #8e44ad;
-    opacity: 0.3;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.2);
-    z-index: 999;
-}
-
-.plus-icon {
-    color: #fff;
-    font-size: 48rpx;
-    font-weight: bold;
-}
+@import './calendar-card.css'
 </style>
