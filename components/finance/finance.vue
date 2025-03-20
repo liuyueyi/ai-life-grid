@@ -579,11 +579,7 @@ export default {
             this.resetForm();
         },
         formatDate(date) {
-            if (!date) return '';
-            if (typeof date === 'string') {
-                date = new Date(date);
-            }
-            return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+            return DateUtil.viewShowDate(date);
         },
         getTotalIncome() {
             return this.financeRecords
@@ -608,42 +604,7 @@ export default {
             return (parseFloat(this.getTotalIncome()) - parseFloat(this.getTotalExpense())).toFixed(2);
         },
         getCategoryIcon(category) {
-            const icons = {
-                // 收入类
-                '工资': '💰',
-                '奖金': '🎁',
-                '投资': '📈',
-                '礼金': '🧧',
-                '兼职': '💼',
-                '理财': '🏦',
-                '其他': '🔄',
-                // 支出类
-                '购物': '🛒',
-                '食物': '🍴',
-                '手机': '📱',
-                '娱乐': '🎮',
-                '教育': '📚',
-                '美容': '💄',
-                '运动': '⚽',
-                '社交': '🤝',
-                '交通': '🚗',
-                '衣服': '👔',
-                '汽车': '🚘',
-                '酒': '🍺',
-                '烟': '🚬',
-                '电子': '💻',
-                '旅行': '✈️',
-                '医疗': '🏥',
-                '宠物': '🐱',
-                '维修': '🔧',
-                '住房': '🏠',
-                '厨房': '🍳',
-                '礼物': '🎀',
-                '捐款': '❤️',
-                '彩票': '🎰',
-                '零食': '🍪'
-            };
-            return icons[category] || '⚪';
+            return FinanceUtil.getCategoryIcon(category);
         }
     }
 };

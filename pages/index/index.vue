@@ -117,7 +117,8 @@ export default {
       retirementDate: '',
       lifeExpectancy: '',
 
-      showDayCard: false,
+      // 默认显示台历模式
+      showDayCard: true,
       // 生命格子相关
       dimensions: ['year', 'month', 'day'],
       dimensionLabels: {

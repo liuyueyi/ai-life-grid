@@ -134,6 +134,19 @@ export default {
     this.themeMode = app.globalData.themeMode;
     this.particleEffect = app.globalData.particleEffect;
 
+    if (options.tab) {
+      if (options.tab == 'events') {
+        this.activeTab = 'events';
+      } else if (options.tab == 'mood') {
+        this.activeTab = 'mood';
+      } else if (options.tab == 'finance') {
+        this.activeTab = 'finance';
+      }
+      this.$nextTick(() => {
+        this.changeTab(options.tab);
+      })
+    }
+
     // 获取页面参数
     if (options.date) {
       // 处理形如 2025、2025-4、2025-4-3 格式的日期参数

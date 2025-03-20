@@ -17,9 +17,20 @@
             <view class="section" v-if="events.length > 0">
                 <view class="section-title">今日任务</view>
                 <view class="event-list">
-                    <view v-for="(event, index) in events" :key="index" class="event-item">
-                        <text class="event-text">{{ event.content }}</text>
-                        <text class="event-time">{{ event.time }}</text>
+                    <view v-for="(event, index) in events" :key="index" class="event-item"
+                        @click="navigateToDetail('events')">
+                        <view class="event-left">
+                            <text class="event-indicator">●</text>
+                            <text class="event-text">{{ event.content }}</text>
+                        </view>
+                        <view class="event-right">
+                            <view class="event-tags">
+                                <text v-for="(tag, tagIndex) in event.tags" :key="tagIndex" class="event-tag">{{ tag
+                                    }}</text>
+                            </view>
+                            <text class="event-time">{{ event.time }}</text>
+                            <!-- <text class="delete-btn" @click="deleteEvent(event.id)">×</text> -->
+                        </view>
                     </view>
                 </view>
             </view>
@@ -28,10 +39,22 @@
             <view class="section" v-if="finances.length > 0">
                 <view class="section-title">收支记录</view>
                 <view class="finance-list">
-                    <view v-for="(item, index) in finances" :key="index" class="finance-item">
-                        <text class="finance-category">{{ item.category }}</text>
-                        <text :class="['finance-amount', item.type === 'income' ? 'income' : 'expense']">{{ item.type
-            === 'income' ? '+' : '-' }}{{ item.amount }}</text>
+                    <view v-for="(item, index) in finances" :key="index" class="finance-item"
+                        @click="navigateToDetail('finance')">
+                        <view class="finance-left">
+                            <view :class="['record-icon', item.type === 'income' ? 'income-bg' : 'expense-bg']">
+                                <text class="finance-emoji">{{ getCategoryEmoji(item.category) }}</text>
+                            </view>
+                            <view class="finance-info">
+                                <text class="finance-category">{{ item.category }}</text>
+                                <text class="finance-remark" v-if="item.remark">{{ item.remark }}</text>
+                            </view>
+                        </view>
+                        <view class="finance-right">
+                            <text :class="['finance-amount', item.type === 'income' ? 'income' : 'expense']">{{
+            item.type === 'income' ? '+' : '-' }}{{ item.amount }}</text>
+                            <!-- <text class="delete-btn" @click="deleteFinance(item.id)">×</text> -->
+                        </view>
                     </view>
                 </view>
             </view>
@@ -40,7 +63,8 @@
             <view class="section" v-if="moods.length > 0">
                 <view class="section-title">心情记录</view>
                 <view class="mood-list">
-                    <view v-for="(mood, index) in moods" :key="index" class="mood-item">
+                    <view v-for="(mood, index) in moods" :key="index" class="mood-item"
+                        @click="navigateToDetail('mood')">
                         <text class="mood-emoji">{{ mood.emoji }}</text>
                         <text class="mood-text">{{ mood.content }}</text>
                     </view>
@@ -58,6 +82,7 @@
 <script>
 import { DateUtil } from '../../utils/DateUtil.js';
 import TaskUtils from '../../utils/TaskUtils.js';
+import { FinanceUtil } from '../../utils/FinanceUtil.js';
 
 export default {
     name: 'calendar-card',
@@ -95,6 +120,32 @@ export default {
         this.initializeData();
     },
     methods: {
+        getCategoryEmoji(category) {
+            return FinanceUtil.getCategoryIcon(category);
+        },
+
+        deleteEvent(eventId) {
+            const cell = {
+                type: 'day',
+                year: this.year,
+                month: this.month,
+                day: this.day
+            };
+            if (TaskUtils.deleteEvent(cell, eventId)) {
+                this.events = TaskUtils.getEvents(cell);
+                uni.showToast({ title: '删除成功', icon: 'success' });
+            }
+        },
+
+        deleteFinance(financeId) {
+            const date = `${this.year}-${this.month + 1}-${this.day}`;
+            const record = this.finances.find(f => f.id === financeId);
+            if (record && FinanceUtil.deleteDayRecord(record)) {
+                this.finances = FinanceUtil.getFinanceRecords(this.year, this.month, this.day);
+                uni.showToast({ title: '删除成功', icon: 'success' });
+            }
+        },
+
         initializeData() {
             // 随机选择一条每日文案
             this.dailyQuote = this.dailyQuotes[Math.floor(Math.random() * this.dailyQuotes.length)];
@@ -115,16 +166,16 @@ export default {
             this.events = TaskUtils.getEvents(cell) || [];
 
             // 获取收支数据
-            const financeKey = `${date}_finance`;
-            this.finances = uni.getStorageSync(financeKey) || [];
+            const { year, month, day } = DateUtil.parseDateString(date);
+            this.finances = FinanceUtil.getFinanceRecords(year, month, day) || [];
 
             // 获取心情数据
             const moodKey = `${date}_mood`;
             this.moods = uni.getStorageSync(moodKey) || [];
         },
-        navigateToDetail() {
+        navigateToDetail(tab) {
             uni.navigateTo({
-                url: `/pages/detail/detail?date=${this.currentYear}-${this.currentMonth + 1}-${this.currentDay}`
+                url: `/pages/detail/detail?date=${this.year}-${this.month + 1}-${this.day}&tab=${tab}`
             });
         }
     }
@@ -205,25 +256,82 @@ export default {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10rpx 0;
-    border-bottom: 1rpx solid #f0f0f0;
+    padding: 15rpx;
+    margin-bottom: 15rpx;
+    background-color: white;
+    border-radius: 10rpx;
+    box-shadow: 0 2rpx 5rpx rgba(0, 0, 0, 0.1);
 }
 
-.event-text,
-.finance-category,
-.mood-text {
-    font-size: 26rpx;
+.event-left,
+.finance-left {
+    display: flex;
+    align-items: center;
+    flex: 1;
+}
+
+.event-right,
+.finance-right {
+    display: flex;
+    align-items: center;
+    gap: 15rpx;
+}
+
+.event-indicator {
+    color: #8e44ad;
+    margin-right: 10rpx;
+    font-size: 24rpx;
+}
+
+.event-text {
+    font-size: 28rpx;
+    color: #333;
+}
+
+.event-tags {
+    display: flex;
+    gap: 8rpx;
+}
+
+.event-tag {
+    font-size: 20rpx;
+    padding: 4rpx 8rpx;
+    background-color: #f0f0f0;
+    border-radius: 4rpx;
     color: #666;
 }
 
-.event-time {
+.event-time,
+.finance-time {
+    font-size: 24rpx;
+    color: #666;
+}
+
+.finance-emoji {
+    font-size: 32rpx;
+    margin-right: 10rpx;
+}
+
+.finance-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.finance-category {
+    font-size: 28rpx;
+    color: #333;
+}
+
+.finance-remark {
     font-size: 24rpx;
     color: #999;
+    margin-top: 4rpx;
 }
 
 .finance-amount {
-    font-size: 26rpx;
+    font-size: 28rpx;
     font-weight: bold;
+    margin-left: 15rpx;
 }
 
 .finance-amount.income {
@@ -232,6 +340,13 @@ export default {
 
 .finance-amount.expense {
     color: #F44336;
+}
+
+.delete-btn {
+    font-size: 32rpx;
+    color: #999;
+    padding: 0 10rpx;
+    cursor: pointer;
 }
 
 .mood-emoji {
@@ -246,6 +361,7 @@ export default {
     width: 100rpx;
     height: 100rpx;
     background: #8e44ad;
+    opacity: 0.3;
     border-radius: 50%;
     display: flex;
     align-items: center;
