@@ -22,7 +22,7 @@
                         </view>
                         <view class="event-meta">
                             <view class="event-time" style="margin-left: -1rem;">
-                                <text> {{ formatEventDate(event.id) }} &nbsp;</text>
+                                <text v-if="cell.type != 'day'"> {{ formatEventDate(event.id) }} &nbsp;</text>
                                 <picker mode="time" :value="event.time || currentTime" start="00:00" end="23:59"
                                     @change="onTimeChange($event, index)">
                                     <text>{{ event.time || currentTime }}</text>
