@@ -26,7 +26,8 @@
       </view>
 
       <view v-if="showDayCard">
-        <CalendarCard :year="this.selectedCell.year" :month="this.selectedCell.month" :day="this.selectedCell.day">
+        <CalendarCard :year="this.selectedCell.year" :month="this.selectedCell.month" :day="this.selectedCell.day"
+          @date-change="handleDateChange">
         </CalendarCard>
       </view>
       <view v-else>
@@ -199,6 +200,15 @@ export default {
     }
   },
   methods: {
+    handleDateChange(newDate) {
+      // 更新selectedCell的日期
+      this.selectedCell = {
+        ...this.selectedCell,
+        year: newDate.year,
+        month: newDate.month,
+        day: newDate.day
+      };
+    },
     handleCellClick(cell) {
       if (this.selectedCell === cell) {
         // 双击了格子，准备进入详情页吧
@@ -575,7 +585,7 @@ export default {
     },
 
     changeDimension(dimension) {
-      console.log('点击了'+dimension+'按钮')
+      console.log('点击了' + dimension + '按钮')
       this.currentDimension = dimension;
       this.updateVisibleCells();
       // 不显示台历
