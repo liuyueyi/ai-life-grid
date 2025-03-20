@@ -1,5 +1,16 @@
 <template>
     <view class="finance-tab" @scroll="handleScroll">
+        <!-- 日期选择器弹窗 -->
+        <custom-popup ref="datePickerPopup">
+            <date-picker 
+                :year="cell.year" 
+                :initial-month="0" 
+                :initial-day="1" 
+                @confirm="onDateSelected" 
+                @cancel="hideDatePicker"
+            />
+        </custom-popup>
+        
         <!-- 悬浮按钮 -->
         <view class="float-button" @click="showRecorder" v-if="!isRecorderVisible" :style="{ opacity: buttonOpacity }">
             <text class="plus-icon">+</text>
@@ -13,7 +24,7 @@
             </view>
             <view class="assets-details">
                 <view class="detail-item">
-                    <view class="detail-label" @tap="categoryShow = 'expense'">总收入
+                    <view class="detail-label" @tap="categoryShow = 'income'">总收入
                         <svg style="width: 1.2em;height: 1.2em;vertical-align: middle;fill: currentColor;overflow: hidden;"
                             viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1536">
                             <path
@@ -23,7 +34,7 @@
                     </view>
                     <text class="detail-value income">{{ getTotalIncome() }}</text>
                 </view>
-                <view class="detail-item" @tap="categoryShow = 'income'">
+                <view class="detail-item" @tap="categoryShow = 'expense'">
                     <view class="detail-label">总支出
                         <svg style="width: 1.2em;height: 1.2em;vertical-align: middle;fill: currentColor;overflow: hidden;"
                             viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1536">
@@ -37,15 +48,16 @@
             </view>
         </view>
         <!-- 添加支出分类统计图 -->
-        <view>
-            <view class="category-chart" v-if="financeRecords.length > 0">
+        <view v-if="financeRecords.length > 0">
+            <view class="category-chart">
                 <canvas canvas-id="categoryPieChart" class="pie-chart" @touchstart="touchChart"></canvas>
                 <view class="chart-legend">
                     <text>{{ this.categoryShow == 'expense' ? '支出分布:' : '收入分布:' }}</text>
                     <view v-for="(item, index) in categoryStats" :key="index" class="legend-item">
-                        <text class="legend-dot" :style="{ backgroundColor: item.color }"></text>
-                        <text class="legend-label">{{ item.category }}</text>
-                        <text class="legend-value">{{ item.percentage }}%</text>
+                        <!-- 最多只显示top4的占比 -->
+                        <text v-if="index <= 3" class="legend-dot" :style="{ backgroundColor: item.color }"></text>
+                        <text v-if="index <= 3" class="legend-label">{{ item.category }}</text>
+                        <text v-if="index <= 3" class="legend-value">{{ item.percentage }}%</text>
                     </view>
                 </view>
             </view>
@@ -146,9 +158,15 @@
 
 <script>
 import { DateUtil } from '../../utils/DateUtil.js';
+import DatePicker from '../date-picker/date-picker.vue';
+import CustomPopup from '../custom-popup/custom-popup.vue';
 
 export default {
     name: 'Finance',
+    components: {
+        DatePicker,
+        CustomPopup
+    },
     props: {
         cell: {
             type: Object,
@@ -184,6 +202,7 @@ export default {
     data() {
         return {
             isRecorderVisible: false,
+            showDatePicker: false,
             currentType: 'expense',
             currentAmount: '',
             selectedCategory: '',
@@ -200,6 +219,11 @@ export default {
             editingRecordId: null,
             categoryStats: [],
             categoryShow: 'expense',
+            financeDate: {
+                year: '',
+                month: '',
+                day: '',
+            },
         };
     },
     computed: {
@@ -240,9 +264,11 @@ export default {
                     }
                 }
                 this.financeRecords = records;
+                this.financeDate = {
+                    year: this.cell.year,
+                }
             } else if (this.cell.type === 'month') {
                 // 加载本月每一天的记录
-                console.log('加载本月每一天的记录')
                 let records = [];
                 for (let day = DateUtil.getDays(this.cell.year, this.cell.month); day > 0; day--) {
                     let r = this.getFinanceRecords(this.cell.year, this.cell.month, day);
@@ -251,26 +277,66 @@ export default {
                     }
                 }
                 this.financeRecords = records;
-                console.log('加载日记录', this.financeRecords)
+                this.financeDate = {
+                    year: this.cell.year,
+                    month: this.cell.month,
+                }
             } else {
                 // 日维度记录
                 this.financeRecords = this.getFinanceRecords(this.cell.year, this.cell.month, this.cell.day);
+                this.financeDate = {
+                    year: this.cell.year,
+                    month: this.cell.month,
+                    day: this.cell.day
+                }
             }
         },
-
-        saveData() {
-            if (this.cell.type === 'year') {
-
-            } else if (this.cell.type === 'month') {
-                const financeKey = this.getFinanceKey(this.cell.year, this.cell.month, this.cell.day);
-
+        saveDayRecord(record) {
+            // 添加记录
+            const { year, month, day } = DateUtil.parseDateString(record.date);
+            const financeKey = this.getFinanceKey(year, month, day);
+            let records = uni.getStorageSync(financeKey) || []
+            const index = records.findIndex(e => e.id === record.id);
+            if (index !== -1) {
+                // 做更新逻辑
+                records[index] = record;
+                uni.setStorageSync(financeKey, records);
+                return true;
             } else {
-                // 保存日记录
-                const financeKey = this.getFinanceKey(this.cell.year, this.cell.month, this.cell.day);
-                uni.setStorageSync(financeKey, this.financeRecords);
+                // 做新增逻辑
+                records.push(record);
+                uni.setStorageSync(financeKey, records);
+                return true;
             }
-
-            this.$emit('save', this.financeRecords);
+        },
+        // 对financeRecords进行排序的方法
+        sortFinanceRecords() {
+            if (this.cell.type === 'year' || this.cell.type === 'month') {
+                // 按照日期倒序排列，如果日期相同则按照id倒序排列
+                this.financeRecords.sort((a, b) => {
+                    // 先转换日期为时间戳进行比较
+                    const dateA = new Date(a.date).getTime();
+                    const dateB = new Date(b.date).getTime();
+                    
+                    if (dateA === dateB) {
+                        // 日期相同时，按照id倒序排列
+                        return b.id - a.id;
+                    }
+                    // 日期不同时，按照日期倒序排列
+                    return dateB - dateA;
+                });
+            }
+        },
+        deleteDayRecord(record) {
+            // 删除记录
+            const { year, month, day } = DateUtil.parseDateString(record.date);
+            const financeKey = this.getFinanceKey(year, month, day);
+            let records = uni.getStorageSync(financeKey) || []
+            const filteredEvents = records.filter(e => e.id !== record.id);
+            if (filteredEvents.length != records.length) {
+                uni.setStorageSync(financeKey, filteredEvents);
+                return true;
+            }
         },
         getCategoryStats() {
             const stats = {};
@@ -350,8 +416,9 @@ export default {
         deleteRecord(record) {
             const index = this.financeRecords.findIndex(item => item.id === record.id);
             if (index !== -1) {
+                this.deleteDayRecord(record);
+
                 this.financeRecords.splice(index, 1);
-                this.saveData();
                 uni.showToast({
                     title: '删除成功',
                     icon: 'success'
@@ -359,7 +426,26 @@ export default {
             }
         },
         showRecorder() {
-            this.isRecorderVisible = true;
+            if (this.cell.type === 'year') {
+                // 年视图，使用日期选择器组件
+                this.showDatePicker = true;
+                this.$nextTick(() => {
+                    this.$refs.datePickerPopup.open();
+                });
+            } else if (this.cell.type === 'month') {
+                // 月视图，只需选择日期
+                const days = DateUtil.getDays(this.cell.year, this.cell.month);
+                uni.showActionSheet({
+                    itemList: Array.from({ length: days }, (_, i) => `${i + 1}日`),
+                    success: (res) => {
+                        this.financeDate.day = res.tapIndex + 1;
+                        this.isRecorderVisible = true;
+                    }
+                });
+            } else {
+                // 日视图，直接显示记录面板
+                this.isRecorderVisible = true;
+            }
         },
         editRecord(record) {
             this.currentType = record.type;
@@ -368,13 +454,34 @@ export default {
             this.remark = record.remark || '';
             this.editingRecordId = record.id;
             this.calcProcess = record.calcProcess || '';
-            this.showRecorder();
+            let { year, month, day } = DateUtil.parseDateString(record.date);
+            this.financeDate = {
+                year: year,
+                month: month,
+                day: day
+            }
+            // 直接显示
+            this.isRecorderVisible = true;
         },
         hideRecorder() {
             this.isRecorderVisible = false;
             this.resetForm();
             this.resetRecord();
             this.editingRecordId = null;
+            if (this.showDatePicker) {
+                this.hideDatePicker();
+            }
+        },
+        
+        onDateSelected(date) {
+            this.financeDate.month = date.month;
+            this.financeDate.day = date.day;
+            this.hideDatePicker();
+            this.isRecorderVisible = true;
+        },
+        hideDatePicker() {
+            this.$refs.datePickerPopup.close();
+            this.showDatePicker = false;
         },
         resetForm() {
             this.currentType = 'expense';
@@ -514,11 +621,12 @@ export default {
             }
 
             const recordData = {
-                type: this.currentType,
-                category: this.selectedCategory,
-                calcProcess: this.calcProcess,
-                amount: parseFloat(this.currentAmount).toFixed(2),
-                remark: this.remark
+                type: this.currentType, // 收入/支出
+                category: this.selectedCategory, // 选中的分类
+                calcProcess: this.calcProcess, // 金额计算历史
+                amount: parseFloat(this.currentAmount).toFixed(2), // 金额
+                remark: this.remark, // 备注
+                date: `${this.financeDate.year}-${this.financeDate.month + 1}-${this.financeDate.day}`
             };
 
             if (this.editingRecordId) {
@@ -528,20 +636,21 @@ export default {
                     this.financeRecords[index] = {
                         ...this.financeRecords[index],
                         ...recordData,
-                        date: new Date()
                     };
                 }
             } else {
                 // 添加新记录
+                recordData.id = Date.now();
                 this.financeRecords.unshift({
                     ...recordData,
-                    id: Date.now(),
-                    date: new Date()
                 });
             }
 
             this.hideRecorder();
-            this.saveData();
+            // 这里是每次都全量保存了一下，我们改成增量保存
+            this.saveDayRecord(recordData);
+            // 在年视图和月视图下对记录进行排序
+            this.sortFinanceRecords();
             this.resetForm();
         },
         formatDate(date) {

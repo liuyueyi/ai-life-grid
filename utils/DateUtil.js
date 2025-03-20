@@ -93,4 +93,18 @@ export class DateUtil {
   static getDays(year, month) {
     return new Date(year, month + 1, 0).getDate()
   }
+  // 新增日期字符串解析方法
+  static parseDateString(dateStr) {
+    if (!dateStr) return null;
+
+    // 支持多种分隔符（- /）
+    const parts = dateStr.split(/[-\/]/);
+    if (parts.length !== 3) return null;
+
+    return {
+      year: parseInt(parts[0], 10),
+      month: parseInt(parts[1], 10) - 1, // 月份转为0-based
+      day: parseInt(parts[2], 10)
+    };
+  }
 }
