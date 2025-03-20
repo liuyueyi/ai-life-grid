@@ -8,9 +8,11 @@
       <view class="grid-controls">
         <view class="dimension-selector">
           <text v-for="(dim, index) in dimensions" :key="index"
-            :class="['dimension-option', currentDimension === dim ? 'active' : '']" @click="changeDimension(dim)">
+            :class="['dimension-option', currentDimension === dim && !showDayCard ? 'active' : '']"
+            @click="changeDimension(dim)">
             {{ dimensionLabels[dim] }}
           </text>
+          <text :class="['dimension-option', showDayCard ? 'active' : '']" @click="doShowDayCard()">台历</text>
         </view>
 
         <view class="view-controls">
@@ -23,48 +25,55 @@
         </view>
       </view>
 
-      <view class="grid-header">
-        <text class="nav-arrow" @click="navigatePrevious" v-if="this.currentDimension != 'year'">◀</text>
-        <text v-else></text>
-        <text class="header-text" @click="toggleDimension">{{ currentDimension === 'day' ?
-    `${currentYear}年${currentMonth + 1}月` : currentDimension === 'year' ? '我的人生格子' : currentYear + '年' }}</text>
-        <text class="nav-arrow" @click="navigateNext" v-if="this.currentDimension != 'year'">▶</text>
-        <text v-else></text>
+      <view v-if="showDayCard">
+        <CalendarCard :year="this.selectedCell.year" :month="this.selectedCell.month" :day="this.selectedCell.day">
+        </CalendarCard>
       </view>
-      <scroll-view class="grid-scroll-view" :scroll-y="true" @scroll="onGridScroll" :show-scrollbar="false"
-        :scroll-top="scrollPosition" :enhanced="true" :bounces="true">
-        <view class="grid-wrapper">
-          <view v-if="currentDimension === 'day'" class="weekday-header">
-            <text v-for="day in ['日', '一', '二', '三', '四', '五', '六']" :key="day" class="weekday-label">{{ day }}</text>
-          </view>
-          <view :class="['grid-container', `${currentDimension}-view`]">
-            <view v-for="(cell, index) in visibleCells" :key="index"
-              :class="['grid-cell', getCellClasses(cell), currentDimension === 'day' ? 'calendar-cell' : '', cell === selectedCell ? 'selected-cell' : '']"
-              @click="handleCellClick(cell)">
-              <view class="cell-content">
-                <text class="cell-label" v-html="getCellLabel(cell)">
-                </text>
-                <text v-if="cell.hasEvents" class="cell-event-indicator">•</text>
-                <view v-if="currentDimension === 'day' && cell.isCurrentMonth" class="expand-button"
-                  @tap.stop="viewFullDetail">+</view>
-                <view class="fullscreen-icon" @tap.stop="handleFullscreenClick(cell)"
-                  style="position: absolute; top: 2rpx; right: 12%;">
-                  <text>⛶</text>
+      <view v-else>
+        <view class="grid-header">
+          <text class="nav-arrow" @click="navigatePrevious" v-if="this.currentDimension != 'year'">◀</text>
+          <text v-else></text>
+          <text class="header-text" @click="toggleDimension">{{ currentDimension === 'day' ?
+    `${currentYear}年${currentMonth + 1}月` : currentDimension === 'year' ? '我的人生格子' : currentYear + '年' }}</text>
+          <text class="nav-arrow" @click="navigateNext" v-if="this.currentDimension != 'year'">▶</text>
+          <text v-else></text>
+        </view>
+        <scroll-view class="grid-scroll-view" :scroll-y="true" @scroll="onGridScroll" :show-scrollbar="false"
+          :scroll-top="scrollPosition" :enhanced="true" :bounces="true">
+          <view class="grid-wrapper">
+            <view v-if="currentDimension === 'day'" class="weekday-header">
+              <text v-for="day in ['日', '一', '二', '三', '四', '五', '六']" :key="day" class="weekday-label">{{ day }}</text>
+            </view>
+            <view :class="['grid-container', `${currentDimension}-view`]">
+              <view v-for="(cell, index) in visibleCells" :key="index"
+                :class="['grid-cell', getCellClasses(cell), currentDimension === 'day' ? 'calendar-cell' : '', cell === selectedCell ? 'selected-cell' : '']"
+                @click="handleCellClick(cell)">
+                <view class="cell-content">
+                  <text class="cell-label" v-html="getCellLabel(cell)">
+                  </text>
+                  <text v-if="cell.hasEvents" class="cell-event-indicator">•</text>
+                  <view v-if="currentDimension === 'day' && cell.isCurrentMonth" class="expand-button"
+                    @tap.stop="viewFullDetail">+</view>
+                  <view class="fullscreen-icon" @tap.stop="handleFullscreenClick(cell)"
+                    style="position: absolute; top: 2rpx; right: 12%;">
+                    <text>⛶</text>
+                  </view>
                 </view>
               </view>
             </view>
           </view>
-        </view>
-      </scroll-view>
+        </scroll-view>
 
-      <!-- 浮动按钮 -->
-      <view class="floating-today-btn" @click="navigateToToday()">
-        <text>今</text>
-      </view>
-      <view class="floating-add-btn" @click="openCellDetail()" v-if="this.selectedCell">
-        <text>+</text>
+        <!-- 浮动按钮 -->
+        <view class="floating-today-btn" @click="navigateToToday()">
+          <text>今</text>
+        </view>
+        <view class="floating-add-btn" @click="openCellDetail()" v-if="this.selectedCell">
+          <text>+</text>
+        </view>
       </view>
     </view>
+
 
     <!-- 格子详情弹窗 -->
     <custom-popup ref="cellDetailPopup" type="center" height="68vh">
@@ -85,6 +94,7 @@
 <script>
 import CustomPopup from '@/components/custom-popup/custom-popup.vue'
 import InitForm from '@/components/init-form/init-form.vue'
+import CalendarCard from '@/components/calendar-card/calendar-card.vue'
 import EventManager from '@/components/event-manager/event-manager.vue'
 import TaskUtils from '../../utils/TaskUtils.js';
 
@@ -93,7 +103,8 @@ export default {
   components: {
     CustomPopup,
     InitForm,
-    EventManager
+    EventManager,
+    CalendarCard
   },
   data() {
     return {
@@ -106,6 +117,7 @@ export default {
       retirementDate: '',
       lifeExpectancy: '',
 
+      showDayCard: false,
       // 生命格子相关
       dimensions: ['year', 'month', 'day'],
       dimensionLabels: {
@@ -234,6 +246,13 @@ export default {
       this.workStartDate = userData.workStartDate;
       this.retirementDate = userData.retirementDate;
       this.lifeExpectancy = userData.lifeExpectancy;
+    },
+
+    showCalendarCards() {
+      if (!this.selectedCell) {
+        // 默认选中今天对应的格子
+
+      }
     },
 
     // 生命格子相关方法
@@ -555,8 +574,23 @@ export default {
     },
 
     changeDimension(dimension) {
+      console.log('点击了'+dimension+'按钮')
       this.currentDimension = dimension;
       this.updateVisibleCells();
+      // 不显示台历
+      this.showDayCard = false;
+    },
+    doShowDayCard() {
+      // 显示台历
+      if (this.selectedCell == null) {
+        this.selectedCell = {
+          type: 'day',
+          year: this.currentYear,
+          month: this.currentMonth,
+          day: this.currentDay
+        };
+      }
+      this.showDayCard = true;
     },
 
     changeView(view) {
@@ -607,14 +641,23 @@ export default {
       let label = '';
       switch (cell.type) {
         case 'year':
-          label = `${cell.year}年`;
+          const birthYear = new Date(this.birthDate).getFullYear();
+          const age = cell.year - birthYear;
+          const ageStyle = `position: absolute; font-style: italic; color: rgba(128, 128, 128, 0.2); font-size: 1.8em; z-index: 1; top: 50%; left: 50%; transform: translate(-50%, -50%);`;
+          const yearStyle = `position: relative; z-index: 2;font-size:1.1rem`;
+          label = `<span style="${ageStyle}">${age}岁</span><span style="${yearStyle}">${cell.year}</span>`;
           if (cell.stageMark) {
             // 根据不同阶段添加对应的年龄范围
+            const birthYear = new Date(this.birthDate).getFullYear();
+            const schoolStartYear = new Date(this.schoolStartDate).getFullYear();
+            const workStartYear = new Date(this.workStartDate).getFullYear();
+            const retirementYear = new Date(this.retirementDate).getFullYear();
+
             const stageRanges = {
-              '童年': '(0-3岁)',
-              '学习': '(3-18岁)',
-              '工作': '(18-60岁)',
-              '退休': '(60岁以后)'
+              '童年': `(0-${schoolStartYear - birthYear}岁)`,
+              '学习': `(${schoolStartYear - birthYear}-${workStartYear - birthYear}岁)`,
+              '工作': `(${workStartYear - birthYear}-${retirementYear - birthYear}岁)`,
+              '退休': `(${retirementYear - birthYear}岁以后)`
             };
             const range = stageRanges[cell.stageMark] || '';
             return `<div style="position: absolute;
@@ -645,7 +688,14 @@ export default {
           }
           break;
         case 'month':
-          label = `${cell.month + 1}月`;
+          const birthDate = new Date(this.birthDate);
+          const cellDate = new Date(cell.year, cell.month);
+          const ageYears = cellDate.getFullYear() - birthDate.getFullYear();
+          const ageMonths = cellDate.getMonth() - birthDate.getMonth();
+          const totalMonths = ageYears * 12 + ageMonths;
+          const monthAgeStyle = `position: absolute; font-style: italic; color: rgba(128, 128, 128, 0.2); font-size: 1.5rem; z-index: 1; top: 50%; left: 50%; transform: translate(-50%, -80%);`;
+          const monthNumberStyle = `position: relative; z-index: 2;font-size:2rem`;
+          label = `<span style="${monthAgeStyle}">${Math.floor(totalMonths / 12)}岁${totalMonths % 12}月</span><span style="${monthNumberStyle}">${cell.month + 1}月</span>`;
           break;
         case 'day':
           label = `${cell.day}`;

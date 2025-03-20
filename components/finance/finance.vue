@@ -2,15 +2,10 @@
     <view class="finance-tab" @scroll="handleScroll">
         <!-- 日期选择器弹窗 -->
         <custom-popup ref="datePickerPopup">
-            <date-picker 
-                :year="cell.year" 
-                :initial-month="0" 
-                :initial-day="1" 
-                @confirm="onDateSelected" 
-                @cancel="hideDatePicker"
-            />
+            <date-picker :year="cell.year" :initial-month="0" :initial-day="1" @confirm="onDateSelected"
+                @cancel="hideDatePicker" />
         </custom-popup>
-        
+
         <!-- 悬浮按钮 -->
         <view class="float-button" @click="showRecorder" v-if="!isRecorderVisible" :style="{ opacity: buttonOpacity }">
             <text class="plus-icon">+</text>
@@ -158,6 +153,7 @@
 
 <script>
 import { DateUtil } from '../../utils/DateUtil.js';
+import { FinanceUtil } from '../../utils/FinanceUtil.js';
 import DatePicker from '../date-picker/date-picker.vue';
 import CustomPopup from '../custom-popup/custom-popup.vue';
 
@@ -244,98 +240,28 @@ export default {
                 this.buttonOpacity = 0.3;
             }, 1500);
         },
-        getFinanceKey(year, month, day) {
-            return `finance_${year}_${month}_${day}`;
-        },
-        getFinanceRecords(year, month, day) {
-            const key = this.getFinanceKey(year, month, day);
-            return uni.getStorageSync(key) || []
-        },
         loadData() {
             if (this.cell.type === 'year') {
                 // 加载整年的记录
-                let records = [];
-                for (let month = 12; month >= 0; month--) {
-                    for (let day = DateUtil.getDays(this.cell.year, month); day > 0; day--) {
-                        let r = this.getFinanceRecords(this.cell.year, month, day);
-                        if (r && r.length > 0) {
-                            records = records.concat(r);
-                        }
-                    }
-                }
-                this.financeRecords = records;
+                this.financeRecords = FinanceUtil.loadData(this.cell.year);
                 this.financeDate = {
                     year: this.cell.year,
                 }
             } else if (this.cell.type === 'month') {
                 // 加载本月每一天的记录
-                let records = [];
-                for (let day = DateUtil.getDays(this.cell.year, this.cell.month); day > 0; day--) {
-                    let r = this.getFinanceRecords(this.cell.year, this.cell.month, day);
-                    if (r && r.length > 0) {
-                        records = records.concat(r);
-                    }
-                }
-                this.financeRecords = records;
+                this.financeRecords = FinanceUtil.loadData(this.cell.year, this.cell.month)
                 this.financeDate = {
                     year: this.cell.year,
                     month: this.cell.month,
                 }
             } else {
                 // 日维度记录
-                this.financeRecords = this.getFinanceRecords(this.cell.year, this.cell.month, this.cell.day);
+                this.financeRecords = FinanceUtil.getFinanceRecords(this.cell.year, this.cell.month, this.cell.day);
                 this.financeDate = {
                     year: this.cell.year,
                     month: this.cell.month,
                     day: this.cell.day
                 }
-            }
-        },
-        saveDayRecord(record) {
-            // 添加记录
-            const { year, month, day } = DateUtil.parseDateString(record.date);
-            const financeKey = this.getFinanceKey(year, month, day);
-            let records = uni.getStorageSync(financeKey) || []
-            const index = records.findIndex(e => e.id === record.id);
-            if (index !== -1) {
-                // 做更新逻辑
-                records[index] = record;
-                uni.setStorageSync(financeKey, records);
-                return true;
-            } else {
-                // 做新增逻辑
-                records.push(record);
-                uni.setStorageSync(financeKey, records);
-                return true;
-            }
-        },
-        // 对financeRecords进行排序的方法
-        sortFinanceRecords() {
-            if (this.cell.type === 'year' || this.cell.type === 'month') {
-                // 按照日期倒序排列，如果日期相同则按照id倒序排列
-                this.financeRecords.sort((a, b) => {
-                    // 先转换日期为时间戳进行比较
-                    const dateA = new Date(a.date).getTime();
-                    const dateB = new Date(b.date).getTime();
-                    
-                    if (dateA === dateB) {
-                        // 日期相同时，按照id倒序排列
-                        return b.id - a.id;
-                    }
-                    // 日期不同时，按照日期倒序排列
-                    return dateB - dateA;
-                });
-            }
-        },
-        deleteDayRecord(record) {
-            // 删除记录
-            const { year, month, day } = DateUtil.parseDateString(record.date);
-            const financeKey = this.getFinanceKey(year, month, day);
-            let records = uni.getStorageSync(financeKey) || []
-            const filteredEvents = records.filter(e => e.id !== record.id);
-            if (filteredEvents.length != records.length) {
-                uni.setStorageSync(financeKey, filteredEvents);
-                return true;
             }
         },
         getCategoryStats() {
@@ -407,23 +333,19 @@ export default {
                 content: `确定要删除这条${record.type === 'income' ? '收入' : '支出'}记录吗？`,
                 success: (res) => {
                     if (res.confirm) {
-                        this.deleteRecord(record);
+                        const index = this.financeRecords.findIndex(item => item.id === record.id);
+                        if (index !== -1) {
+                            // 删除记录
+                            FinanceUtil.deleteDayRecord(record);
+                            this.financeRecords.splice(index, 1);
+                            uni.showToast({
+                                title: '删除成功',
+                                icon: 'success'
+                            });
+                        }
                     }
                 }
             });
-        },
-
-        deleteRecord(record) {
-            const index = this.financeRecords.findIndex(item => item.id === record.id);
-            if (index !== -1) {
-                this.deleteDayRecord(record);
-
-                this.financeRecords.splice(index, 1);
-                uni.showToast({
-                    title: '删除成功',
-                    icon: 'success'
-                });
-            }
         },
         showRecorder() {
             if (this.cell.type === 'year') {
@@ -472,7 +394,7 @@ export default {
                 this.hideDatePicker();
             }
         },
-        
+
         onDateSelected(date) {
             this.financeDate.month = date.month;
             this.financeDate.day = date.day;
@@ -648,9 +570,12 @@ export default {
 
             this.hideRecorder();
             // 这里是每次都全量保存了一下，我们改成增量保存
-            this.saveDayRecord(recordData);
+            FinanceUtil.saveDayRecord(recordData);
             // 在年视图和月视图下对记录进行排序
-            this.sortFinanceRecords();
+            if (this.cell.type === 'year' || this.cell.type === 'month') {
+                // 按照日期倒序排列，如果日期相同则按照id倒序排列
+                FinanceUtil.sortFinanceRecords(this.financeRecords);
+            }
             this.resetForm();
         },
         formatDate(date) {
