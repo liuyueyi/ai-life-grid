@@ -1,0 +1,692 @@
+.mood-component {
+  width: 100%;
+  padding: 10px;
+}
+
+/* 空状态下的样式 */
+.mood-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+}
+
+.mood-date-time {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.mood-date {
+  font-size: 18px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 5px;
+}
+
+.mood-time {
+  font-size: 16px;
+  color: #666;
+}
+
+.mood-question {
+  font-size: 20px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+/* 表情选择样式 */
+.mood-faces {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 30px;
+}
+
+.mood-face-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px;
+  border-radius: 10px;
+  transition: all 0.3s;
+}
+
+.mood-face-item.selected {
+  background-color: rgba(142, 68, 173, 0.2);
+  transform: scale(1.1);
+}
+
+.face-icon {
+  font-size: 30px;
+  margin-bottom: 5px;
+}
+
+.face-name {
+  font-size: 14px;
+}
+
+.mood-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.mood-image {
+  width: 80px;
+  height: 80px;
+  border-radius: 5px;
+}
+
+.add-image {
+  width: 80px;
+  height: 80px;
+  border-radius: 5px;
+  background-color: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: #999;
+}
+
+.add-image-btn, .add-voice-btn {
+  width: 100%;
+  height: 40px;
+  line-height: 40px;
+  text-align: center;
+  background-color: #f0f0f0;
+  color: #666;
+  border-radius: 5px;
+  margin-bottom: 10px;
+}
+
+.mood-voice {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.voice-player {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 15px;
+  background-color: #f0f0f0;
+  border-radius: 20px;
+}
+
+.voice-icon {
+  margin-right: 10px;
+  font-size: 18px;
+}
+
+.delete-voice {
+  margin-left: 10px;
+  font-size: 18px;
+  color: #e53935;
+}
+
+.add-btn, .save-btn {
+  width: 100%;
+  height: 45px;
+  line-height: 45px;
+  background-color: #8e44ad;
+  color: white;
+  border-radius: 8px;
+  font-size: 16px;
+  margin-top: 10px;
+}
+
+/* 录音弹窗样式 */
+.voice-recorder {
+  width: 300px;
+  background-color: white;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.recorder-header {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  border-bottom: 1px solid #eee;
+}
+
+.recorder-title {
+  flex: 1;
+  text-align: center;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.recorder-close {
+  font-size: 24px;
+  color: #666;
+}
+
+.recorder-content {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.recorder-timer {
+  font-size: 24px;
+  margin-bottom: 20px;
+}
+
+.recorder-btn {
+  width: 150px;
+  height: 150px;
+  border-radius: 75px;
+  background-color: #8e44ad;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.recorder-btn.recording {
+  animation: pulse 1.5s infinite;
+  background-color: #e53935;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+};
+
+/* 活动分类样式 */
+.activity-section {
+  width: 100%;
+  margin-top: 20px;
+}
+
+.activity-question {
+  font-size: 18px;
+  color: #333;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+.activity-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.activity-item {
+  width: 23%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 10px;
+  background-color: #f5f5f5;
+  transition: all 0.3s;
+}
+
+.activity-item.selected {
+  background-color: rgba(142, 68, 173, 0.2);
+  transform: scale(1.05);
+}
+
+.activity-icon {
+  font-size: 24px;
+  margin-bottom: 5px;
+}
+
+.activity-name {
+  font-size: 12px;
+  color: #666;
+  text-align: center;
+}
+
+.add-custom {
+  background-color: #e1bee7;
+}
+
+.custom-activity-input {
+  display: flex;
+  margin-bottom: 15px;
+}
+
+.custom-activity-input input {
+  flex: 1;
+  height: 40px;
+  padding: 0 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px 0 0 5px;
+}
+
+.custom-activity-input button {
+  width: 80px;
+  height: 40px;
+  background-color: #8e44ad;
+  color: white;
+  border-radius: 0 5px 5px 0;
+}
+
+.edit-content-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 120px;
+  height: 40px;
+  margin: 0 auto;
+  background-color: #8e44ad;
+  color: white;
+  border-radius: 20px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.edit-icon {
+  margin-right: 5px;
+}
+
+/* 富文本编辑器样式 */
+.rich-editor {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: white;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+}
+
+.editor-header {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  border-bottom: 1px solid #eee;
+}
+
+.editor-title {
+  flex: 1;
+  text-align: center;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.editor-close {
+  font-size: 24px;
+  color: #666;
+}
+
+.editor-content {
+  flex: 1;
+  padding: 15px;
+  overflow-y: auto;
+}
+
+.mood-textarea {
+  width: 100%;
+  height: 150px;
+  padding: 10px;
+  margin-bottom: 15px;
+  border: 1px solid #eee;
+  border-radius: 5px;
+  font-size: 16px;
+}
+
+/* 已有记录样式 */
+.mood-list {
+  width: 100%;
+}
+
+.mood-item {
+  background-color: white;
+  border-radius: 10px;
+  padding: 15px;
+  margin-bottom: 15px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.mood-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.mood-date {
+  flex: 1;
+  font-size: 14px;
+}
+
+.mood-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.mood-image {
+  width: 80px;
+  height: 80px;
+  border-radius: 5px;
+}
+
+.add-image {
+  width: 80px;
+  height: 80px;
+  border-radius: 5px;
+  background-color: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: #999;
+}
+
+.add-image-btn, .add-voice-btn {
+  width: 100%;
+  height: 40px;
+  line-height: 40px;
+  text-align: center;
+  background-color: #f0f0f0;
+  color: #666;
+  border-radius: 5px;
+  margin-bottom: 10px;
+}
+
+.mood-voice {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.voice-player {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 15px;
+  background-color: #f0f0f0;
+  border-radius: 20px;
+}
+
+.voice-icon {
+  margin-right: 10px;
+  font-size: 18px;
+}
+
+.delete-voice {
+  margin-left: 10px;
+  font-size: 18px;
+  color: #e53935;
+}
+
+.add-btn, .save-btn {
+  width: 100%;
+  height: 45px;
+  line-height: 45px;
+  background-color: #8e44ad;
+  color: white;
+  border-radius: 8px;
+  font-size: 16px;
+  margin-top: 10px;
+}
+
+/* 录音弹窗样式 */
+.voice-recorder {
+  width: 300px;
+  background-color: white;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.recorder-header {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  border-bottom: 1px solid #eee;
+}
+
+.recorder-title {
+  flex: 1;
+  text-align: center;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.recorder-close {
+  font-size: 24px;
+  color: #666;
+}
+
+.recorder-content {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.recorder-timer {
+  font-size: 24px;
+  margin-bottom: 20px;
+}
+
+.recorder-btn {
+  width: 150px;
+  height: 150px;
+  border-radius: 75px;
+  background-color: #8e44ad;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.recorder-btn.recording {
+  animation: pulse 1.5s infinite;
+  background-color: #e53935;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+};
+
+.mood-score {
+  margin-right: 10px;
+}
+
+.mood-star {
+  font-size: 18px;
+  color: #ddd;
+}
+
+.mood-star.active {
+  color: #ffc107;
+}
+
+.delete-btn {
+  padding: 3px 8px;
+  background-color: #ffebee;
+  color: #e53935;
+  border-radius: 15px;
+  font-size: 12px;
+}
+
+.mood-content {
+  width: 100%;
+  height: 80px;
+  padding: 10px;
+  margin-bottom: 10px;
+  border: 1px solid #eee;
+  border-radius: 5px;
+  font-size: 14px;
+}
+
+.mood-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.mood-image {
+  width: 80px;
+  height: 80px;
+  border-radius: 5px;
+}
+
+.add-image {
+  width: 80px;
+  height: 80px;
+  border-radius: 5px;
+  background-color: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: #999;
+}
+
+.add-image-btn, .add-voice-btn {
+  width: 100%;
+  height: 40px;
+  line-height: 40px;
+  text-align: center;
+  background-color: #f0f0f0;
+  color: #666;
+  border-radius: 5px;
+  margin-bottom: 10px;
+}
+
+.mood-voice {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.voice-player {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 15px;
+  background-color: #f0f0f0;
+  border-radius: 20px;
+}
+
+.voice-icon {
+  margin-right: 10px;
+  font-size: 18px;
+}
+
+.delete-voice {
+  margin-left: 10px;
+  font-size: 18px;
+  color: #e53935;
+}
+
+.add-btn, .save-btn {
+  width: 100%;
+  height: 45px;
+  line-height: 45px;
+  background-color: #8e44ad;
+  color: white;
+  border-radius: 8px;
+  font-size: 16px;
+  margin-top: 10px;
+}
+
+/* 录音弹窗样式 */
+.voice-recorder {
+  width: 300px;
+  background-color: white;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.recorder-header {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  border-bottom: 1px solid #eee;
+}
+
+.recorder-title {
+  flex: 1;
+  text-align: center;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.recorder-close {
+  font-size: 24px;
+  color: #666;
+}
+
+.recorder-content {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.recorder-timer {
+  font-size: 24px;
+  margin-bottom: 20px;
+}
+
+.recorder-btn {
+  width: 150px;
+  height: 150px;
+  border-radius: 75px;
+  background-color: #8e44ad;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.recorder-btn.recording {
+  animation: pulse 1.5s infinite;
+  background-color: #e53935;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}

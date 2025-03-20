@@ -20,39 +20,7 @@
 
       <!-- 心情日志 -->
       <view v-if="activeTab === 'mood'" class="mood-tab">
-        <!-- 下面这个是画板 -->
-        <!-- <view class="huabi-content" style="width: 100%;">
-          <sp-board :tools="boardTools" saveAction="toAlbum" @completed="paintingCompleted"
-            width="80vw" height="80vh"></sp-board>
-        </view> -->
-        <view class="mood-list">
-          <view v-for="(log, index) in moodLogs" :key="index" class="mood-item">
-            <view class="mood-header">
-              <view class="mood-date">{{ formatDate(log.date) }}</view>
-              <view class="mood-score">
-                <text v-for="i in 5" :key="i" :class="['mood-star', i <= log.score ? 'active' : '']"
-                  @click="updateMoodScore(index, i)">★</text>
-              </view>
-              <view class="delete-btn" @click="deleteMoodLog(index)">删除</view>
-            </view>
-            <textarea v-model="log.content" placeholder="记录今天的心情..." class="mood-content" />
-            <view class="mood-images" v-if="log.images && log.images.length > 0">
-              <image v-for="(img, imgIndex) in log.images" :key="imgIndex" :src="img" class="mood-image"
-                mode="aspectFill" />
-              <view class="add-image" @click="addImageToLog(index)">+</view>
-            </view>
-            <view v-else class="add-image-btn" @click="addImageToLog(index)">添加图片</view>
-            <view class="mood-voice" v-if="log.voiceUrl">
-              <view class="voice-player" @click="playVoice(log.voiceUrl)">
-                <view class="voice-icon">🎤</view>
-                <view class="voice-duration">{{ log.voiceDuration || '0:00' }}</view>
-              </view>
-              <view class="delete-voice" @click="deleteVoice(index)">×</view>
-            </view>
-            <view v-else class="add-voice-btn" @click="recordVoice(index)">录制语音</view>
-          </view>
-        </view>
-        <button class="add-btn" @click="addNewMoodLog">添加心情日志</button>
+        <mood :storage-key="getStorageKey()" :cell="cell" @save="handleMoodSave" />
       </view>
 
       <!-- 收入支出台账 -->
@@ -61,22 +29,7 @@
       </view>
     </view>
 
-    <!-- 录音弹窗 -->
-    <custom-popup ref="voiceRecorder" type="center">
-      <view class="voice-recorder">
-        <view class="recorder-header">
-          <text class="recorder-title">录制语音</text>
-          <text class="recorder-close" @click="cancelRecording">×</text>
-        </view>
-        <view class="recorder-content">
-          <view class="recorder-timer">{{ recordingTime }}</view>
-          <view :class="['recorder-btn', isRecording ? 'recording' : '']" @touchstart="startRecording"
-            @touchend="stopRecording">
-            {{ isRecording ? '松开结束' : '按住录音' }}
-          </view>
-        </view>
-      </view>
-    </custom-popup>
+
   </view>
 </template>
 
@@ -84,10 +37,13 @@
 import TaskUtils from '../../utils/TaskUtils.js';
 import EventManager from '../../components/event-manager/event-manager.vue';
 import Finance from '../../components/finance/finance.vue';
+import Mood from '../../components/mood/mood.vue';
 
 export default {
   components: {
-    EventManager
+    EventManager,
+    Finance,
+    Mood
   },
   data() {
     return {
@@ -290,7 +246,7 @@ export default {
     },
 
 
-    // 心情日志相关方法
+    // 格式化日期方法 (用于标题显示)
     formatDate(date) {
       if (!date) return '';
 
@@ -301,132 +257,15 @@ export default {
       return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
     },
 
-    addNewMoodLog() {
-      this.moodLogs.push({
-        id: Date.now(),
-        date: new Date(),
-        score: 3,
-        content: '',
-        images: [],
-        voiceUrl: '',
-        voiceDuration: ''
-      });
-    },
-
-    updateMoodScore(index, score) {
-      if (index >= 0 && index < this.moodLogs.length) {
-        this.moodLogs[index].score = score;
-      }
-    },
-
-    deleteMoodLog(index) {
-      if (index >= 0 && index < this.moodLogs.length) {
-        this.moodLogs.splice(index, 1);
-      }
-    },
-
-    addImageToLog(index) {
-      if (index < 0 || index >= this.moodLogs.length) return;
-
-      uni.chooseImage({
-        count: 9,
-        success: (res) => {
-          const tempFilePaths = res.tempFilePaths;
-
-          // 确保images数组存在
-          if (!this.moodLogs[index].images) {
-            this.moodLogs[index].images = [];
-          }
-
-          // 添加图片
-          this.moodLogs[index].images = [...this.moodLogs[index].images, ...tempFilePaths];
-        }
-      });
-    },
-
-    recordVoice(index) {
-      this.currentMoodLogIndex = index;
-      this.$refs.voiceRecorder.open();
-    },
-
-    startRecording() {
-      // 初始化录音管理器
-      this.recorder = uni.getRecorderManager();
-
-      // 配置录音参数
-      this.recorder.start({
-        duration: 60000, // 最长录音时间，单位ms
-        sampleRate: 44100,
-        numberOfChannels: 1,
-        encodeBitRate: 192000,
-        format: 'mp3'
-      });
-
-      // 开始计时
-      this.isRecording = true;
-      let seconds = 0;
-      this.recordTimer = setInterval(() => {
-        seconds++;
-        const minutes = Math.floor(seconds / 60);
-        const remainingSeconds = seconds % 60;
-        this.recordingTime = `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
-      }, 1000);
-
-      // 监听录音结束事件
-      this.recorder.onStop((res) => {
-        if (this.currentMoodLogIndex >= 0 && this.currentMoodLogIndex < this.moodLogs.length) {
-          this.moodLogs[this.currentMoodLogIndex].voiceUrl = res.tempFilePath;
-          this.moodLogs[this.currentMoodLogIndex].voiceDuration = this.recordingTime;
-        }
-
-        // 关闭弹窗
-        this.$refs.voiceRecorder.close();
-
-        // 重置状态
-        this.isRecording = false;
-        clearInterval(this.recordTimer);
-        this.recordingTime = '00:00';
-      });
-    },
-
-    stopRecording() {
-      if (this.recorder && this.isRecording) {
-        this.recorder.stop();
-      }
-    },
-
-    cancelRecording() {
-      if (this.recorder && this.isRecording) {
-        this.recorder.stop();
-      }
-
-      // 关闭弹窗
-      this.$refs.voiceRecorder.close();
-
-      // 重置状态
-      this.isRecording = false;
-      clearInterval(this.recordTimer);
-      this.recordingTime = '00:00';
-    },
-
-    playVoice(voiceUrl) {
-      if (!voiceUrl) return;
-
-      const innerAudioContext = uni.createInnerAudioContext();
-      innerAudioContext.src = voiceUrl;
-      innerAudioContext.play();
-    },
-
-    deleteVoice(index) {
-      if (index >= 0 && index < this.moodLogs.length) {
-        this.moodLogs[index].voiceUrl = '';
-        this.moodLogs[index].voiceDuration = '';
-      }
-    },
-
     handleFinanceSave(records) {
       // 处理Finance组件保存事件
       console.log('Finance records saved:', records);
+    },
+    
+    handleMoodSave(logs) {
+      // 处理Mood组件保存事件
+      this.moodLogs = logs;
+      this.saveData();
     }
   }
 };

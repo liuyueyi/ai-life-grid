@@ -3,7 +3,6 @@
     <view v-if="!initialized">
       <init-form @initialize="handleInitialize"></init-form>
     </view>
-
     <view v-else class="life-grid-container">
       <view class="grid-controls">
         <view class="dimension-selector">
@@ -151,7 +150,7 @@ export default {
       cellEvents: [],
 
       // 自定义设置
-      backgroundImage: '/static/images/default-bg.jpg',
+      backgroundImage: '',
       backgroundMusic: '',
       particleEffect: '无',
       themeMode: 'light',
@@ -194,6 +193,12 @@ export default {
 
       if (!this.selectedCell) {
         this.handleCellClick(currentCell)
+      }
+
+      // 加载自定义设置
+      const settings = uni.getStorageSync('lifeGridSettings');
+      if (settings) {
+        this.backgroundImage = settings.backgroundImage || this.backgroundImage;
       }
     }
   },

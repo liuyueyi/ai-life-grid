@@ -27,6 +27,13 @@
         "navigationBarTitleText": "分享",
         "navigationStyle": "custom"
       }
+    },
+    {
+    	"path" : "pages/mood/mood",
+    	"style" : 
+    	{
+    		"navigationBarTitleText" : ""
+    	}
     }
     
   ],
