@@ -88,4 +88,67 @@ export class MoodsUtil {
             return true;
         }
     }
+
+    static getMoodKey(cell) {
+        const { type, year, month, day } = cell;
+        let key = `moods_${type}_${year}`;
+        if (month !== undefined && month != null) key += `_${month}`;
+        if (day !== undefined && day != null) key += `_${day}`;
+        return key;
+    }
+
+    /**
+     * 查询某一天/月/年的心情日志列表
+     * @param {年月日-类型} cell 
+     * @returns 
+     */
+    static getMoods(cell) {
+        const key = this.getMoodKey(cell);
+        return uni.getStorageSync(key) || []
+    }
+
+    /**
+     * 查询某一个具体的心情日志
+     * @param {年月日-类型} cell 
+     * @param {心情日志id} id 
+     * @returns 
+     */
+    static getMood(cell, id) {
+        const moods = this.getMoods(cell);
+        if (moods.length === 0) return null;
+        return moods.find(e => e.id === id)
+    }
+
+    static insertMood(cell, moods) {
+        const key = this.getMoodKey(cell);
+        uni.setStorageSync(key, moods);
+    }
+
+    static saveMood(cell, mood) {
+        let moods = this.getMoods(cell);
+        console.log('moods', moods)
+        moods = []
+        // 判断是否存在重复的
+        let findIndex = moods.findIndex(e => e.id === mood.id);
+        if (findIndex !== -1) {
+            // 采用更新逻辑
+            moods[findIndex] = mood;
+        } else {
+            // 新增
+            moods.push(mood)
+        }
+        console.log('准备写入新的数据', moods)
+        this.insertMood(cell, moods);
+    }
+
+    static deleteMood(cell, id) {
+        let records = this.getMoods(cell);
+        const filteredEvents = records.filter(e => e.id !== id);
+        if (events.length !== filteredEvents.length) {
+            // 删除日志
+            uni.setStorageSync(key, filteredEvents);
+            return true;
+        }
+        return false;
+    }
 }

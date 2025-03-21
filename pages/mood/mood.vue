@@ -57,6 +57,10 @@
 						<view class="activity-icon">{{ activity.icon }}</view>
 						<view class="activity-name">{{ activity.name }}</view>
 					</view>
+					<view class="activity-item add-custom" @click="toggleEditActivities()">
+						<view class="activity-icon">🖊</view>
+						<view class="activity-name"> {{ !isEditingActivities ? '编辑' : '取消' }} </view>
+					</view>
 					<view class="activity-item add-custom" @click="showActivityPopup()">
 						<view class="activity-icon">+</view>
 						<view class="activity-name">自定义</view>
@@ -81,7 +85,8 @@
 							</svg></view>
 					</view>
 				</view>
-				<textarea v-model="moodContent" placeholder="记录此刻的心情..." :class="{ 'fullscreen': isFullscreen }" class="custom-textarea"/>
+				<textarea v-model="moodContent" placeholder="记录此刻的心情..." :class="{ 'fullscreen': isFullscreen }"
+					class="custom-textarea" />
 
 				<view class="section-title" @click="recodingShow = true">
 					<text class="section-icon">🎤</text>
@@ -114,7 +119,6 @@
 			<!-- 底部悬浮按钮 -->
 			<view class="floating-buttons">
 				<view class="save-button" @click="saveMoodLog">保存</view>
-				<view class="edit-activities-button" @click="toggleEditActivities">编辑活动</view>
 			</view>
 		</view>
 	</view>
@@ -216,6 +220,7 @@ export default {
 				{ icon: '😫', name: '超烂' }
 			],
 			selectedMood: null,
+			currentMood: {},
 
 			// 活动分类
 			activities: [],
@@ -241,11 +246,6 @@ export default {
 			moodImages: [],
 			voiceUrl: '',
 			voiceDuration: '',
-
-			// 心情日志数据
-			moodLogs: [],
-			hasMoodLog: false,
-			currentMoodLogIndex: -1,
 
 			// 时间相关
 			currentTime: '',
@@ -279,9 +279,25 @@ export default {
 				day: day
 			}
 		}
-
-		this.moodId = options.moodId;
 		this.loadActivities();
+		this.moodId = options.moodId;
+		let mood = MoodsUtil.getMood(this.cell, this.moodId);
+		if (mood) {
+			let {year, month, day} = DateUtil.parseDateString(mood.moodDate.date);
+			this.cell = {
+				year: year,
+				month: month,
+				day: day
+			};
+			this.currentTime = mood.moodDate.time;
+			this.selectedMood = moodFaces[mood.mood];
+			this.selectedActivities = mood.activities.map(a => a.id);
+			this.moodContent = mood.content;
+			this.moodImages = mood.images;
+			this.voiceUrl = mood.voice;
+			this.voiceDuration = mood.voiceDuration;
+		}
+		this.currentMood = mood ? mood : {}
 	},
 	methods: {
 		showDatePicker() {
@@ -315,17 +331,6 @@ export default {
 			const minutes = now.getMinutes().toString().padStart(2, '0');
 			this.currentTime = `${hours}:${minutes}`;
 		},
-
-		formatDate(date) {
-			if (!date) return '';
-
-			if (typeof date === 'string') {
-				date = new Date(date);
-			}
-
-			return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
-		},
-
 		// 心情选择相关方法
 		selectMood(index) {
 			this.selectedMood = index;
@@ -453,29 +458,8 @@ export default {
 			});
 		},
 
-		addImageToLog(index) {
-			if (index < 0 || index >= this.moodLogs.length) return;
-
-			uni.chooseImage({
-				count: 9,
-				success: (res) => {
-					const tempFilePaths = res.tempFilePaths;
-
-					// 确保images数组存在
-					if (!this.moodLogs[index].images) {
-						this.moodLogs[index].images = [];
-					}
-
-					// 添加图片
-					this.moodLogs[index].images = [...this.moodLogs[index].images, ...tempFilePaths];
-					this.saveMoodLogs();
-				}
-			});
-		},
-
 		// 录音相关方法
-		recordVoice(index) {
-			this.currentMoodLogIndex = index;
+		recordVoice() {
 			this.$refs.voiceRecorder.open();
 		},
 
@@ -504,18 +488,9 @@ export default {
 
 			// 监听录音结束事件
 			this.recorder.onStop((res) => {
-				if (this.currentMoodLogIndex >= 0) {
-					// 更新已有日志的录音
-					if (this.currentMoodLogIndex < this.moodLogs.length) {
-						this.moodLogs[this.currentMoodLogIndex].voiceUrl = res.tempFilePath;
-						this.moodLogs[this.currentMoodLogIndex].voiceDuration = this.recordingTime;
-						this.saveMoodLogs();
-					} else {
-						// 更新当前编辑器的录音
-						this.voiceUrl = res.tempFilePath;
-						this.voiceDuration = this.recordingTime;
-					}
-				}
+				// 新增
+				this.voiceUrl = res.tempFilePath;
+				this.voiceDuration = this.recordingTime;
 
 				// 关闭弹窗
 				this.$refs.voiceRecorder.close();
@@ -555,80 +530,62 @@ export default {
 			innerAudioContext.play();
 		},
 
-		deleteVoice(index) {
-			if (index !== undefined) {
-				// 删除日志中的录音
-				if (index >= 0 && index < this.moodLogs.length) {
-					this.moodLogs[index].voiceUrl = '';
-					this.moodLogs[index].voiceDuration = '';
-					this.saveMoodLogs();
-				}
-			} else {
-				// 删除编辑器中的录音
-				this.voiceUrl = '';
-				this.voiceDuration = '';
-			}
-		},
-		saveMoodLogs() {
-			const moodKey = `${this.storageKey}_mood`;
-			uni.setStorageSync(moodKey, this.moodLogs);
-			this.hasMoodLog = this.moodLogs.length > 0;
-			this.$emit('save', this.moodLogs);
+		deleteVoice() {
+			// 删除编辑器中的录音
+			this.voiceUrl = '';
+			this.voiceDuration = '';
 		},
 
 		// 心情日志管理方法
-		addNewMoodLog() {
-			this.moodLogs.push({
-				id: Date.now(),
-				date: new Date(),
-				score: 3,
-				content: '',
-				images: [],
-				voiceUrl: '',
-				voiceDuration: ''
-			});
-			this.saveMoodLogs();
-		},
-
-		updateMoodScore(index, score) {
-			if (index >= 0 && index < this.moodLogs.length) {
-				this.moodLogs[index].score = score;
-				this.saveMoodLogs();
-			}
-		},
-
-		deleteMoodLog(index) {
-			if (index >= 0 && index < this.moodLogs.length) {
-				this.moodLogs.splice(index, 1);
-				this.saveMoodLogs();
-			}
-		},
-
 		saveMoodLog() {
-			// 从编辑器保存新的心情日志
-			const selectedActivitiesText = this.selectedActivities.map(id => {
-				const activity = this.activities.find(a => a.id === id);
-				return activity ? activity.name : '';
-			}).filter(Boolean).join(', ');
+			if (!this.selectedActivities || this.selectedActivities.length <= 0) {
+				uni.showToast({
+					title: '请先选择活动分类',
+					icon: 'none'
+				});
+				return;
+			}
 
-			const newLog = {
-				id: Date.now(),
-				date: new Date(),
-				score: this.selectedMood !== null ? this.selectedMood + 1 : 3, // 转换为1-5分
-				content: this.moodContent + (selectedActivitiesText ? `\n活动: ${selectedActivitiesText}` : ''),
-				images: this.moodImages,
-				voiceUrl: this.voiceUrl,
-				voiceDuration: this.voiceDuration
-			};
+			// 根据 activityId 查询对应的活动分类
+			const moodActivities = this.selectedActivities.map(id => {
+				return this.activities.find(a => a.id === id);
+			});
+			// 更新时间
+			let saveMood = {
+				id: this.currentMood.id,
+				editDate: Date.now(),
+				mood: this.selectedMood, // 选中的心情
+				moodInfo: this.moodFaces[this.selectedMood],
+				activities: moodActivities, // 选中的活动分类
+				content: this.moodContent, // 心情日志
+				images: this.moodImages, // 上传的图片
+				voiceUrl: this.voiceUrl, // 录音相关
+				voiceDuration: this.voiceDuration,
+				moodDate: { // 添加心情对应的日期和时间
+					date: `${this.cell.year}-${this.cell.month + 1}-${this.cell.day}`,
+					time: this.currentTime
+				}
+			}
 
-			this.moodLogs.push(newLog);
-			this.saveMoodLogs();
+			if (!saveMood.id) {
+				saveMood.id = Date.now();
+			}
+			console.log('saveMood', saveMood)
+			MoodsUtil.saveMood(this.cell, saveMood);
 
+			this.resetMoodInfo();
+			this.closeEditor();
+		},
+
+		resetMoodInfo() {
 			// 重置状态
 			this.selectedMood = null;
 			this.selectedActivities = [];
-			this.closeEditor();
-		},
+			this.moodContent = '';
+			this.moodImages = [];
+			this.voiceUrl = '';
+			this.voiceDuration = 0;
+		}
 	}
 }
 </script>
