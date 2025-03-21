@@ -99,12 +99,23 @@ export class DateUtil {
 
     // 支持多种分隔符（- /）
     const parts = dateStr.split(/[-\/]/);
-    if (parts.length !== 3) return null;
-
-    return {
+    const dateParts = {
       year: parseInt(parts[0], 10),
-      month: parseInt(parts[1], 10) - 1, // 月份转为0-based
-      day: parseInt(parts[2], 10)
+      month: parts.length > 1 ? parseInt(parts[1], 10) - 1 : null, // 月份转为0-based
+      day: parts.length > 2 ? parseInt(parts[2], 10) : null
+    };
+
+    return dateParts;
+  }
+
+  static parseTimeString(timeStr) {
+    // 形如 09:15 的字符串
+    if (!timeStr) return null;
+    const parts = timeStr.split(':');
+    if (parts.length !== 2) return null;
+    return {
+      hour: parseInt(parts[0], 10),
+      minute: parseInt(parts[1], 10)
     };
   }
 

@@ -15,17 +15,17 @@
     <view class="content">
       <!-- 关键事项 -->
       <view v-if="activeTab === 'events'" class="events-tab">
-        <event-manager :cell="cell" source="detail" @save="handleEventSave" @cancel="handleEventCancel" />
+        <event-manager :cell="cell" source="detail" @save="handleEventSave" @cancel="handleEventCancel" :reload="reload"/>
       </view>
 
       <!-- 心情日志 -->
       <view v-if="activeTab === 'mood'" class="mood-tab">
-        <mood :storage-key="getStorageKey()" :cell="cell" />
+        <mood :storage-key="getStorageKey()" :cell="cell" :reload="reload"/>
       </view>
 
       <!-- 收入支出台账 -->
       <view v-if="activeTab === 'finance'" class="finance-tab">
-        <finance :storage-key="getStorageKey()" @save="handleFinanceSave" :cell="cell" />
+        <finance :storage-key="getStorageKey()" @save="handleFinanceSave" :cell="cell" :reload="reload"/>
       </view>
     </view>
 
@@ -81,11 +81,14 @@ export default {
       recordingTime: '00:00',
       recordTimer: null,
       recorder: null,
-      currentMoodLogIndex: -1
+      currentMoodLogIndex: -1,
+
+      reload: 1,
     };
   },
   onShow() {
     console.log('重新显示了！');
+    this.reload += 1;
   },
   onLoad(options) {
     // 获取全局主题和特效设置

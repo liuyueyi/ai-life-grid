@@ -1,6 +1,7 @@
 <template>
 	<view class="mood-component" :style="{ backgroundImage: `url(${backgroundImage})` }">
 		<view class="top" v-if="selectedMood == null">
+			<view class="mood-title-bg">{{ randomQuote }}</view>
 			<view class="mood-question">感觉怎么样?</view>
 
 			<view class="mood-date-time">
@@ -208,6 +209,7 @@ export default {
 	},
 	data() {
 		return {
+			randomQuote: '',
 			cell: {
 			},
 			moodId: '', // 存在时，表示编辑心情
@@ -270,6 +272,7 @@ export default {
 	},
 	onLoad(options) {
 		this.loadActivities();
+		this.randomQuote = MoodsUtil.getRandomQuote();
 
 		const date = options.date;
 		if (date) {
@@ -322,9 +325,9 @@ export default {
 	},
 	methods: {
 		goBack() {
-			uni.navigateBack({
-				delta: 1
-			});
+			// uni.navigateBack({
+			// 	delta: 1
+			// });
 		},
 		showDatePicker() {
 			// 显示日期选择弹窗

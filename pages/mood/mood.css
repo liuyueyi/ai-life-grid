@@ -2,6 +2,15 @@
     padding: 10px;
 }
 
+.mood-title-bg {
+    font-style: italic; /* 斜体 */
+    text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3); /* 阴影 */
+    font-size: 1.5rem; /* 字号大一点 */
+    color: #cccccc; /* 字体颜色 */
+    margin-bottom: -2.5rem; /* 底部间距 */
+    text-align: center;
+}
+
 /* 空状态下的样式 */
 .mood-empty {
     position: relative;

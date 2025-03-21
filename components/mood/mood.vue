@@ -1,9 +1,9 @@
 <template>
     <view class="mood-component">
-        <view class="mood-list">
+        <view class="mood-list" v-if="moodList && moodList.length > 0">
             <view class="mood-group" v-for="(group, date) in groupedMoods" :key="date">
                 <view class="mood-date" v-if="cell.type != 'day'">{{ date }}</view>
-                <view class="mood-date">每一天都是好心情~</view>
+                <view class="mood-date" v-else>每一天都是好心情~</view>
                 <view class="mood-card" v-for="(mood, index) in group" :key="mood.id">
                     <view class="mood-body">
                         <view class="mood-left">
@@ -40,6 +40,14 @@
                 </view>
             </view>
         </view>
+        <view v-else class="empty-tips">
+            <view class="empty-icon"></view>
+            <view class="empty-title">💡 使用小贴士</view>
+            <view class="empty-desc">
+                <text>• 点击右下角"+"按钮添加心情记录</text>
+                <text>• 点击记录菜单，唤起编辑/删除下拉框</text>
+            </view>
+        </view>
 
         <picker @change="handleMenuSelect" v-if="showPicker">
             <view class="menu-overlay" @click="closePicker"></view>
@@ -48,11 +56,18 @@
                     @click="handleMenuSelect({ detail: { value: index } })">{{ option }}</view>
             </view>
         </picker>
+
+        <!-- 新增悬浮按钮 -->
+        <view class="floating-add-button" @click="navigateToAddMood">
+            <text>+</text>
+        </view>
+
     </view>
 </template>
 
 <script>
 import { MoodsUtil } from '../../utils/MoodsUtil.js';
+import { DateUtil } from '../../utils/DateUtil.js';
 
 export default {
     name: 'MoodComponent',
@@ -82,11 +97,20 @@ export default {
         groupedMoods() {
             const groups = {};
             this.moodList.forEach(mood => {
-                const date = mood.moodDate.date;
-                if (!groups[date]) {
-                    groups[date] = [];
+                let {year, month, day} = DateUtil.parseDateString(mood.moodDate.date);
+                let group;
+                if (mood.type == 'year') {
+                    group = `${year}年度日志`
+                } else if (mood.type == 'month') {
+                    group = `${month+1}月日志`
+                } else {
+                    group = `${month+1}月${day}日`;
                 }
-                groups[date].push(mood);
+                
+                if (!groups[group]) {
+                    groups[group] = [];
+                }
+                groups[group].push(mood);
             });
             return groups;
         }
@@ -106,8 +130,58 @@ export default {
     },
     methods: {
         loadMoodList() {
+            console.log('loadMoodList called with cell:', this.cell);
             if (!this.cell) return;
-            this.moodList = MoodsUtil.getMoods(this.cell);
+            if (this.cell.type == 'month') {
+                // 如果是月的维度，则查看当月的所有心情
+                let days = DateUtil.getDays(this.cell.year, this.cell.month);
+                let moods = [];
+                // 查询阅读记录
+                let tmpMoods = MoodsUtil.getMoods(this.cell);
+                console.log('查询月计划:', tmpMoods);
+                if (tmpMoods && tmpMoods.length > 0) {
+                    moods = moods.concat(tmpMoods);
+                }
+
+                for (let i = days; i > 0; i--) {
+                    let tmpCell = {
+                        year: this.cell.year,
+                        month: this.cell.month,
+                        day: i,
+                        type: 'day'
+                    }
+                    let tmpMoods = MoodsUtil.getMoods(tmpCell);
+                    if (tmpMoods && tmpMoods.length > 0) {
+                        moods = moods.concat(tmpMoods);
+                    }
+                }
+                this.moodList = moods;
+            } else if (this.cell.type == 'year') {
+                // 查询每月的记录
+                let moods = []
+                // 查询阅读记录
+                let tmpMoods = MoodsUtil.getMoods(this.cell);
+                if (tmpMoods && tmpMoods.length > 0) {
+                    moods = moods.concat(tmpMoods);
+                }
+
+                for (let i = 11; i >= 0; i--) {
+                    let tmpCell = {
+                        year: this.cell.year,
+                        month: i,
+                        type: 'month'
+                    }
+                    let tmpMoods = MoodsUtil.getMoods(tmpCell);
+                    if (tmpMoods && tmpMoods.length > 0) {
+                        moods = moods.concat(tmpMoods);
+                    }
+                }
+                this.moodList = moods;
+            } else if (this.cell.type == 'day') {
+                // 如果是日的维度，则查看当天的所有心情
+                this.moodList = MoodsUtil.getMoods(this.cell);
+            }
+            console.log('moodList:', this.moodList);
         },
         showMoodMenu(mood) {
             this.selectedMood = mood;
@@ -116,6 +190,19 @@ export default {
         closePicker() {
             this.showPicker = false;
             this.selectedMood = null; // 确保在关闭时重置选中状态
+        },
+        navigateToAddMood() {
+            let date;
+            if (this.cell.type == 'day') {
+                date = `${this.cell.year}-${this.cell.month + 1}-${this.cell.day}`
+            } else if (this.cell.type == 'month') {
+                date = `${this.cell.year}-${this.cell.month + 1}`
+            } else {
+                date = `${this.cell.year}`
+            }
+            uni.navigateTo({
+                url: `/pages/mood/mood?date=${date}`
+            });
         },
         handleMenuSelect(e) {
             const selectedIndex = e.detail.value;
