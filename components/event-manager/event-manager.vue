@@ -127,6 +127,10 @@ export default {
         source: {
             type: String,
             default: 'index'
+        },
+        reload: {
+            type: Number,
+            required: true,
         }
     },
     data() {
@@ -154,6 +158,10 @@ export default {
                 }
                 this.loadDetailEvents();
             }
+        },
+        reload: {
+            immediate: true,
+            handler: 'loadDetailEvents'
         },
     },
     created() {

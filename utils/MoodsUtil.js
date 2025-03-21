@@ -1,3 +1,5 @@
+import { DateUtil } from "./DateUtil";
+
 export class MoodsUtil {
     static activities = [
         { id: 'work', icon: '💼', name: '工作' },
@@ -90,9 +92,16 @@ export class MoodsUtil {
     }
 
     static getMoodKey(cell) {
-        const { type, year, month, day } = cell;
+        let { type, year, month, day } = cell;
+        if (!type) {
+            if (day) type = 'day';
+            else if (month) type = 'month';
+            else type = 'year';
+        }
         let key = `moods_${type}_${year}`;
+        if (type == 'year') return key;
         if (month !== undefined && month != null) key += `_${month}`;
+        if (type == 'month') return key;
         if (day !== undefined && day != null) key += `_${day}`;
         return key;
     }
@@ -103,6 +112,7 @@ export class MoodsUtil {
      * @returns 
      */
     static getMoods(cell) {
+        console.log('查询某一天/月/年的心情日志列表', cell)
         const key = this.getMoodKey(cell);
         return uni.getStorageSync(key) || []
     }
@@ -116,7 +126,7 @@ export class MoodsUtil {
     static getMood(cell, id) {
         const moods = this.getMoods(cell);
         if (moods.length === 0) return null;
-        return moods.find(e => e.id === id)
+        return moods.find(e => e.id == id)
     }
 
     static insertMood(cell, moods) {
@@ -124,10 +134,36 @@ export class MoodsUtil {
         uni.setStorageSync(key, moods);
     }
 
-    static saveMood(cell, mood) {
-        let moods = this.getMoods(cell);
-        console.log('moods', moods)
-        moods = []
+    static buildCell(mood) {
+        let { year, month, day } = DateUtil.parseDateString(mood.moodDate.date)
+        let { type } = mood.type;
+        return {
+            type: type,
+            year: year,
+            month: month,
+            day: day
+        };
+    }
+
+    /**
+  * 根据moodDate中的time进行倒排
+  * @param {Array} moods - 心情数组
+  * @returns {Array} 排序后的心情数组
+  */
+    static sortMoodsByTime(moods) {
+        return moods.sort((a, b) => {
+            const timeA = a.moodDate.time.split(':').map(Number);
+            const timeB = b.moodDate.time.split(':').map(Number);
+            const dateA = new Date(0, 0, 0, timeA[0], timeA[1]);
+            const dateB = new Date(0, 0, 0, timeB[0], timeB[1]);
+            return dateB - dateA; // 倒序排序
+        });
+    }
+
+
+    static saveMood(mood) {
+        const cell = this.buildCell(mood);
+        const moods = this.getMoods(cell);
         // 判断是否存在重复的
         let findIndex = moods.findIndex(e => e.id === mood.id);
         if (findIndex !== -1) {
@@ -135,13 +171,18 @@ export class MoodsUtil {
             moods[findIndex] = mood;
         } else {
             // 新增
-            moods.push(mood)
+            moods.push(mood);
         }
-        console.log('准备写入新的数据', moods)
+        this.sortMoodsByTime(moods);
         this.insertMood(cell, moods);
     }
 
-    static deleteMood(cell, id) {
+    static deleteMoodByDetail(mood) {
+        const cell = this.buildCell(mood);
+        this.deleteMoodById(cell, mood.id);
+    }
+
+    static deleteMoodById(cell, id) {
         let records = this.getMoods(cell);
         const filteredEvents = records.filter(e => e.id !== id);
         if (events.length !== filteredEvents.length) {

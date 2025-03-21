@@ -20,7 +20,7 @@
 
       <!-- 心情日志 -->
       <view v-if="activeTab === 'mood'" class="mood-tab">
-        <mood :storage-key="getStorageKey()" :cell="cell" @save="handleMoodSave" />
+        <mood :storage-key="getStorageKey()" :cell="cell" />
       </view>
 
       <!-- 收入支出台账 -->
@@ -83,6 +83,9 @@ export default {
       recorder: null,
       currentMoodLogIndex: -1
     };
+  },
+  onShow() {
+    console.log('重新显示了！');
   },
   onLoad(options) {
     // 获取全局主题和特效设置

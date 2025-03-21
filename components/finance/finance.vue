@@ -172,6 +172,10 @@ export default {
             type: String,
             required: true
         },
+        reload: {
+            type: Number,
+            required: false,
+        }
     },
     watch: {
         financeRecords: {
@@ -193,6 +197,10 @@ export default {
                     }
                 });
             },
+        },
+        reload: {
+            immediate: true,
+            handler: 'loadData'
         }
     },
     data() {

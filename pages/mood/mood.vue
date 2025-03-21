@@ -269,6 +269,8 @@ export default {
 		}
 	},
 	onLoad(options) {
+		this.loadActivities();
+
 		const date = options.date;
 		if (date) {
 			const { year, month, day } = DateUtil.parseDateString(date);
@@ -278,28 +280,52 @@ export default {
 				month: month,
 				day: day
 			}
+			if (this.cell.day) this.cell.type = 'day';
+			else if (this.cell.month) this.cell.type = 'month';
+			else this.cell.type = 'year'
+		} else {
+			this.cell = {
+				year: DateUtil.getCurrentYear(),
+				month: DateUtil.getCurrentMonth(),
+				day: DateUtil.getCurrentDay(),
+				type: 'day'
+			}
 		}
-		this.loadActivities();
-		this.moodId = options.moodId;
+
+		if (options.type) {
+			// 根据传参进行初始化 type
+			this.cell.type = options.type;
+		}
+
+		this.moodId = options.id;
 		let mood = MoodsUtil.getMood(this.cell, this.moodId);
+		console.log('从db中查询的信息', this.cell, mood);
 		if (mood) {
-			let {year, month, day} = DateUtil.parseDateString(mood.moodDate.date);
+			let { year, month, day } = DateUtil.parseDateString(mood.moodDate.date);
 			this.cell = {
 				year: year,
 				month: month,
-				day: day
+				day: day,
+				type: mood.type
 			};
 			this.currentTime = mood.moodDate.time;
-			this.selectedMood = moodFaces[mood.mood];
+			this.selectedMood = mood.mood;
 			this.selectedActivities = mood.activities.map(a => a.id);
 			this.moodContent = mood.content;
 			this.moodImages = mood.images;
 			this.voiceUrl = mood.voice;
 			this.voiceDuration = mood.voiceDuration;
+			this.moodInde
 		}
 		this.currentMood = mood ? mood : {}
+		console.log("初始化完成", this.selectedMood, this.currentMood);
 	},
 	methods: {
+		goBack() {
+			uni.navigateBack({
+				delta: 1
+			});
+		},
 		showDatePicker() {
 			// 显示日期选择弹窗
 			this.$refs.datePickerPopup.open();
@@ -312,7 +338,8 @@ export default {
 			this.cell = {
 				year: this.cell.year,
 				month: date.month,
-				day: date.day
+				day: date.day,
+				type: this.cell.type,
 			}
 			this.$refs.datePickerPopup.close();
 		},
@@ -564,17 +591,19 @@ export default {
 				moodDate: { // 添加心情对应的日期和时间
 					date: `${this.cell.year}-${this.cell.month + 1}-${this.cell.day}`,
 					time: this.currentTime
-				}
+				},
+				type: this.cell.type
 			}
 
 			if (!saveMood.id) {
 				saveMood.id = Date.now();
 			}
 			console.log('saveMood', saveMood)
-			MoodsUtil.saveMood(this.cell, saveMood);
+			MoodsUtil.saveMood(saveMood);
 
 			this.resetMoodInfo();
 			this.closeEditor();
+			this.goBack();
 		},
 
 		resetMoodInfo() {
